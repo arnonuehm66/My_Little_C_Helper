@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.9.1
+ ** Version: v0.9.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -22,6 +22,7 @@
  ** 29.05.2018  JE    Added cstr_check_if_whitespace() as helper for csTrim().
  ** 28.08.2018  JE    Added csHhex2ll() and ll2csHhex().
  ** 11.09.2018  JE    Added csSetf() to mimik a secure sprinf().
+ ** 21.10.2018  JE    Now cstr do not use realloc sensless too much.
  *******************************************************************************/
 
 
@@ -133,8 +134,8 @@ void cstr_check(cstr* pcString) {
  * Name: cstr_double_capacity_if_full
  *******************************************************************************/
 void cstr_double_capacity_if_full(cstr* pcString, int iSize) {
-  while (pcString->size + iSize > pcString->capacity)
-    pcString->capacity *= 2;
+  if (pcString->size + iSize <= pcString->capacity) return;
+  while (pcString->size + iSize > pcString->capacity) pcString->capacity *= 2;
   pcString->cStr = realloc(pcString->cStr, sizeof(char) * pcString->capacity);
 }
 
@@ -143,8 +144,7 @@ void cstr_double_capacity_if_full(cstr* pcString, int iSize) {
  *******************************************************************************/
 int cstr_len(const char* pcString) {
   int i = 0;
-  while (pcString[i] != '\0')
-    ++i;
+  while (pcString[i] != '\0') ++i;
   return i;
 }
 
