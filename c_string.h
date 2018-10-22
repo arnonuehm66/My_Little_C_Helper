@@ -22,7 +22,7 @@
  ** 29.05.2018  JE    Added cstr_check_if_whitespace() as helper for csTrim().
  ** 28.08.2018  JE    Added csHhex2ll() and ll2csHhex().
  ** 11.09.2018  JE    Added csSetf() to mimik a secure sprinf().
- ** 21.10.2018  JE    Now cstr do not use realloc too much senslessly.
+ ** 21.10.2018  JE    Now cstr do make no unecessary reallocations.
  *******************************************************************************/
 
 
