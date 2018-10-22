@@ -134,7 +134,7 @@ void cstr_check(cstr* pcString) {
  * Name: cstr_double_capacity_if_full
  *******************************************************************************/
 void cstr_double_capacity_if_full(cstr* pcString, int iSize) {
-  // Avoid unnecessary relocations.
+  // Avoid unnecessary reallocations.
   if (pcString->size + iSize <= pcString->capacity)
     return;
 
@@ -142,7 +142,7 @@ void cstr_double_capacity_if_full(cstr* pcString, int iSize) {
   while (pcString->size + iSize > pcString->capacity)
     pcString->capacity *= 2;
 
-  // Reallocate new mmory.
+  // Reallocate new memory.
   pcString->cStr = realloc(pcString->cStr, sizeof(char) * pcString->capacity);
 }
 
