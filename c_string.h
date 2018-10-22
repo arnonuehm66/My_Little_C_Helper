@@ -134,8 +134,15 @@ void cstr_check(cstr* pcString) {
  * Name: cstr_double_capacity_if_full
  *******************************************************************************/
 void cstr_double_capacity_if_full(cstr* pcString, int iSize) {
-  if (pcString->size + iSize <= pcString->capacity) return;
-  while (pcString->size + iSize > pcString->capacity) pcString->capacity *= 2;
+  // Avoid unnecessary relocations.
+  if (pcString->size + iSize <= pcString->capacity)
+    return;
+
+  // Increase capacity until new size fits.
+  while (pcString->size + iSize > pcString->capacity)
+    pcString->capacity *= 2;
+
+  // Reallocate new mmory.
   pcString->cStr = realloc(pcString->cStr, sizeof(char) * pcString->capacity);
 }
 
@@ -144,7 +151,8 @@ void cstr_double_capacity_if_full(cstr* pcString, int iSize) {
  *******************************************************************************/
 int cstr_len(const char* pcString) {
   int i = 0;
-  while (pcString[i] != '\0') ++i;
+  while (pcString[i] != '\0')
+    ++i;
   return i;
 }
 
