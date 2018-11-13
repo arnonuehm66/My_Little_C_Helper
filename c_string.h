@@ -243,15 +243,15 @@ void csSetf(cstr* pcsString, const char* pcFormat, ...) {
   va_start(args1, pcFormat);
   va_start(args2, pcFormat);
 
-  char* pcaBuff = malloc(sizeof(char) * vsnprintf(NULL, 0, pcFormat, args1) + 1);
-  vsprintf(pcaBuff, pcFormat, args2);
+  char* pcBuff = malloc(sizeof(char) * vsnprintf(NULL, 0, pcFormat, args1) + 1);
+  vsprintf(pcBuff, pcFormat, args2);
 
   va_end(args1);
   va_end(args2);
 
-  csSet(pcsString, pcaBuff);
+  csSet(pcsString, pcBuff);
 
-  free(pcaBuff);
+  free(pcBuff);
 }
 
 /*******************************************************************************
