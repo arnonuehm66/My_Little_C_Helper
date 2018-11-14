@@ -15,6 +15,7 @@
  ** 02.10.2018  JE    Adde lower case letters to getHexIntParm().
  ** 10.10.2018  JE    Changed ticks2datetime() to avoid a cstr memory leak.
  ** 13.11.2018  JE    Added PCRE2 wrapper c_my_regex.h v0.1.1.
+ ** 13.11.2018  JE    Added '--rx' to test regex with string provided by '-X'.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -44,7 +45,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.13"
+#define ME_VERSION "0.0.15"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -81,8 +82,9 @@ typedef struct {
   long lByteOff;
   int  iTestMode;
   int  iPrtOff;
-  int  iOptX;     // This version ...
-  cstr csOptX;    // ... or that.
+  int  iOptX;     // Integer verion.
+  cstr csOptX;    // String version.
+  cstr csRx;
   int  iTicksMin;
   int  iTicksMax;
 } t_options;
@@ -127,7 +129,7 @@ void usage(int iErr, char* pcMsg) {
 
   csCat(&csMsg, csMsg.cStr,
 //|************************ 80 chars width ****************************************|
-  "usage: " ME_NAME " [-t] [-o] [-x n] [-X str] [-e hex] [ox=hex] [-y yyyy [-Y yyyy]] file1 [file2 ...]\n"
+  "usage: " ME_NAME " [-t] [-o] [-x n] [-X <str> [--rx <regex>]] [-e hex] [ox=hex] [-y yyyy [-Y yyyy]] file1 [file2 ...]\n"
   "       " ME_NAME " [-h|--help|-v|--version]\n"
   " What the programm should do.\n"
   " '-e' and 'ox=' can be entered as hexadecimal with '0x' prefix or as decimal\n"
@@ -135,7 +137,8 @@ void usage(int iErr, char* pcMsg) {
   "  -t:            don't execute printed commands (default execute)\n"
   "  -o:            print additional offset column\n"
   "  -x n:          this is an option eating n\n"
-  "  -X str:        this is an option eating a string\n"
+  "  -X <str>:      this is an option eating a string\n"
+  "  --rx <regex>:  gives an regex to match string provided by '-X'\n"
   "  -e hex:        this is an hex/dec option eating a hex/dec string\n"
   "  ox=hex:        this is an hex/dec option eating a hex/dec string\n"
   "  -y yyyy:       min year to consider a track as valid (default 2002)\n"
@@ -367,7 +370,8 @@ void getOptions(int argc, char* argv[]) {
   g_tOpts.lByteOff    = 0;
   g_tOpts.iPrtOff     = 0;
   g_tOpts.iOptX       = 0;
-  g_tOpts.csOptX      = csNew("Testing");
+  g_tOpts.csOptX      = csNew("0f:aa:08:7e:50");
+  g_tOpts.csRx        = csNew("([0-9a-fA-F]{2})(:?)");
   g_tOpts.iTicksMin   = 2002;   // This will be converted into unix ticks.
   g_tOpts.iTicksMax   = NO_TICK;
 
@@ -395,6 +399,13 @@ next_argument:
       }
       if (!strcmp(csArgv.cStr, "--off")) {
         g_tOpts.iPrtOff = 1;
+        continue;
+      }
+      if (!strcmp(csArgv.cStr, "--rx")) {
+        shift(&csRv, &iArg, argc, argv);
+        if (csRv.len == 0)
+          dispatchError(ERR_ARGS, "OptX is missing");
+        csSet(&g_tOpts.csRx, csRv.cStr);
         continue;
       }
       dispatchError(ERR_ARGS, "Invalid long option");
@@ -579,17 +590,27 @@ void doRegex(const char* pcToSearch, const char* pcRegex) {
   int          iErr      = 0;
 
   printf("\nMatch: %s\n", pcToSearch);
-  printf("With:  %s\n\n", pcRegex);
+  printf("With:  %s\n",   pcRegex);
 
+  // Init cstr array, which holds all macthes.
   dacsInit(&dacsMatch);
-  iErr = rxInitMatcher(&rxMatcher, 0, pcToSearch, pcRegex, "", &csErr);
 
+  // Compile regex and init global matcher struct.
+  if (rxInitMatcher(&rxMatcher, 0, pcToSearch, pcRegex, "", &csErr) != RX_NO_ERROR) {
+    printf("%s\n", csErr.cStr);
+    goto free_and_exit;
+  }
+
+  // rxMatch() crams all sub-macthes into cstr array and signals, if matching
+  // reached end of string.
   while (rxMatch(&dacsMatch, &rxMatcher, &iErr, &csErr)) {
     for (int i = 0; i < dacsMatch.iCount; ++i)
       printf("$%d = '%s'\n", i, dacsMatch.pcsData[i].cStr);
     printf("----\n");
   }
 
+  // Free memory of all used structs.
+free_and_exit:
   rxDelMatcher(&rxMatcher);
   dacsFree(&dacsMatch);
 }
@@ -598,29 +619,39 @@ void doRegex(const char* pcToSearch, const char* pcRegex) {
  * Name:  debug
  *******************************************************************************/
 void debug(void) {
-  cstr csMin = csNew("");
-  cstr csMax = csNew("");
+  cstr csMin   = csNew("");
+  cstr csMax   = csNew("");
+  cstr csSubRx = csNew("");
+  cstr csRx    = csNew("");
 
   ticks2datetime(&csMin, " (UTC)", g_tOpts.iTicksMin);
   ticks2datetime(&csMax, " (UTC)", g_tOpts.iTicksMax);
 
-  printf("g_tOpts.iTestMode:   %d\n",        g_tOpts.iTestMode);
-  printf("g_tOpts.iPrtOff:     %d\n",        g_tOpts.iPrtOff);
-  printf("g_tOpts.iOptX:       %d\n",        g_tOpts.iOptX);
-  printf("g_tOpts.csOptX.cStr: %s\n",        g_tOpts.csOptX.cStr);
-  printf("g_tOpts.iTicksMin:   %10d (%s)\n", g_tOpts.iTicksMin, csMin.cStr);
-  printf("g_tOpts.iTicksMax:   %10d (%s)\n", g_tOpts.iTicksMax, csMax.cStr);
+  printf("g_tOpts.iTestMode   = %d\n",        g_tOpts.iTestMode);
+  printf("g_tOpts.iPrtOff     = %d\n",        g_tOpts.iPrtOff);
+  printf("g_tOpts.iOptX       = %d\n",        g_tOpts.iOptX);
+  printf("g_tOpts.csOptX.cStr = '%s'\n",      g_tOpts.csOptX.cStr);
+  printf("g_tOpts.csRx.cStr   = '%s'\n",      g_tOpts.csRx.cStr);
+  printf("g_tOpts.iTicksMin   = %10d (%s)\n", g_tOpts.iTicksMin, csMin.cStr);
+  printf("g_tOpts.iTicksMax   = %10d (%s)\n", g_tOpts.iTicksMax, csMax.cStr);
 
   printf("Free argument's dynamic array: ");
   for (int i = 0; i < g_tArgs.iCount - 1; ++i)
     printf("%s, ", g_tArgs.pcsData[i].cStr);
   printf("%s\n", g_tArgs.pcsData[g_tArgs.iCount - 1].cStr);
 
-  doRegex("0f:aa:08:7e:50", "([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})");
-  doRegex("0f:aa:08:7e:50", "([0-9a-fA-F]{2})(:?)");
+  // How to assemble regex via cstr variables.
+  // "([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})"
+  csSet(&csSubRx, "([0-9a-fA-F]{2})");
+  csSetf(&csRx, "%s:%s:%s:%s:%s", csSubRx.cStr, csSubRx.cStr, csSubRx.cStr, csSubRx.cStr, csSubRx.cStr);
+  doRegex("0f:aa:08:7e:50", csRx.cStr);
+
+  doRegex(g_tOpts.csOptX.cStr, g_tOpts.csRx.cStr);
 
   csFree(&csMin);
   csFree(&csMax);
+  csFree(&csSubRx);
+  csFree(&csRx);
 
   exit(0);
 }

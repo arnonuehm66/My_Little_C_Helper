@@ -115,7 +115,7 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchS
   if (prxMatcher->pRegex == NULL) {
     PCRE2_UCHAR buffer[256];
     pcre2_get_error_message(iErrNo, buffer, sizeof(buffer));
-    csSetf(pcsErr, "Compilation failed at %d: %s\n", iErrOff, buffer);
+    csSetf(pcsErr, "Compilation failed at %d: %s", iErrOff, buffer);
     iErr = RX_ERROR;
   }
 
@@ -156,33 +156,33 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
   prxMatcher->pMatchData = pcre2_match_data_create_from_pattern(prxMatcher->pRegex, NULL);
 
   iMatchCount = pcre2_match(
-                  prxMatcher->pRegex,           // the compiled pattern
-                  prxMatcher->pcSubject,        // the subject string
-                  prxMatcher->iSubjectLength,   // the length of the subject
-                  prxMatcher->iPos,             // start at offset iPos
-                  prxMatcher->ui32Opts,         // options
-                  prxMatcher->pMatchData,       // block for storing the result
-                  NULL                          // use default match context
-                );
+    prxMatcher->pRegex,           // the compiled pattern
+    prxMatcher->pcSubject,        // the subject string
+    prxMatcher->iSubjectLength,   // the length of the subject
+    prxMatcher->iPos,             // start at offset iPos
+    prxMatcher->ui32Opts,         // options
+    prxMatcher->pMatchData,       // block for storing the result
+    NULL                          // use default match context
+  );
 
   //****************************************************************************
   //* Error handling.
   //****************************************************************************
 
   if (iMatchCount == PCRE2_ERROR_NOMATCH) {   // Just no match, no error!
-    csSet(pcsErr, "No match\n");
+    csSet(pcsErr, "No match");
     *piErr = RX_NO_MATCH;
     iRv    = RX_RV_END;
     goto free_and_exit;
   }
   if (iMatchCount < 0) {                      // Matching failed.
-    csSetf(pcsErr, "Matching error %d\n", iMatchCount);
+    csSetf(pcsErr, "Matching error %d", iMatchCount);
     *piErr = RX_ERROR;
     iRv    = RX_RV_END;
     goto free_and_exit;
   }
   if (iMatchCount == 0) {                     // Creating output vector failed.
-    csSet(pcsErr, "'ovector' was not big enough for all captured substrings\n");
+    csSet(pcsErr, "'ovector' was not big enough for all captured substrings");
     *piErr = RX_NO_VECTOR;
     iRv    = RX_RV_END;
     goto free_and_exit;
@@ -190,7 +190,7 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
 
   //****************************************************************************
   //* Match succeded. Get a pointer to the output vector, where string offsets
-  //* are stored. Cram all matches into a dynamic string array.
+  //* are stored. Cram all matches into a dynamic cstr array.
   //****************************************************************************
 
   piOvector = pcre2_get_ovector_pointer(prxMatcher->pMatchData);
@@ -204,16 +204,16 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
     iSubStrLen = piOvector[iEnd] - piOvector[iStart];
 
     // ... and add it to the dynamic array via temporary cstr.
-    csSetf(&csSubStr, "%.*s", (int) iSubStrLen, (char*) pcSubStr);
+    csSetf(&csSubStr, "%.*s", iSubStrLen, pcSubStr);
     dacsAdd(pdacsSubMatches, csSubStr.cStr);
   }
 
   // Store end of complete match as pos().
   prxMatcher->iPos = piOvector[1];
 
-  // If the match was an empty string
+  // If the match was an empty string, hop along one pos.
   if (piOvector[1] == piOvector[0]) {
-    csSet(pcsErr, "Empty string\n");
+    csSet(pcsErr, "Empty string");
     *piErr = RX_NO_ERROR;
     iRv    = RX_RV_CONT;
     ++prxMatcher->iPos;
@@ -221,7 +221,7 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
   }
 
   if (piOvector[0] >= prxMatcher->iSubjectLength) {
-    csSet(pcsErr, "End of subject\n");
+    csSet(pcsErr, "End of subject");
     *piErr = RX_NO_ERROR;
     iRv    = RX_RV_END;
     goto free_and_exit;
