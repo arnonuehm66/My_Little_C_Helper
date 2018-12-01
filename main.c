@@ -606,7 +606,7 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   printf("With:  '%s'\n",   pcRegex);
   printf("Flags: '%s'\n",   pcFlags);
 
-  // Init cstr array, which holds all macthes.
+  // Init cstr array, which holds all matches.
   dacsInit(&dacsMatch);
 
   // Compile regex and init global matcher struct.
@@ -615,7 +615,7 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
     goto free_and_exit;
   }
 
-  // rxMatch() crams all sub-macthes into cstr array and signals, if matching
+  // rxMatch() crams all sub-matches into cstr array and signals, if matching
   // reached end of string.
   while (rxMatch(&dacsMatch, &rxMatcher, &iErr, &csErr)) {
     fFoundIt = 1;
