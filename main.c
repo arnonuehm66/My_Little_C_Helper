@@ -416,7 +416,7 @@ next_argument:
       if (!strcmp(csArgv.cStr, "--rxF")) {
         shift(&csRv, &iArg, argc, argv);
         if (csRv.len == 0)
-          dispatchError(ERR_ARGS, "rsF is missing");
+          dispatchError(ERR_ARGS, "rxF is missing");
         csSet(&g_tOpts.csRxF, csRv.cStr);
         continue;
       }
