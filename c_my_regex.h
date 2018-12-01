@@ -2,11 +2,12 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.1.1
+ ** Version: v0.1.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
  ** 19.09.2018  JE    Created version 0.0.1
+ ** 30.11.2018  JE    Changed processing of flag 'x'.
  *******************************************************************************/
 
 
@@ -78,6 +79,7 @@ int  rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr
  *******************************************************************************/
 int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchStr, const char* pcRegex, const char* pcFlags, cstr *pcsErr) {
   cstr       csOPtions = csNew(pcFlags);
+  cstr       csRegex   = csNew(pcRegex);
   int        iErr      = RX_NO_ERROR;
   int        iErrNo    = 0;
   PCRE2_SIZE iErrOff   = 0;
@@ -90,8 +92,9 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchS
   prxMatcher->ui32Opts       = 0;
 
   // Convert option string into options and init everything to work global.
+  // Because PCRE2_EXTENDED don't work, I use the implizit form '(?x:)'.
   for (int i = 0; i < csOPtions.len; ++i) {
-    if (csOPtions.cStr[i] == 'x') prxMatcher->ui32Opts |= PCRE2_EXTENDED;
+    if (csOPtions.cStr[i] == 'x') csSetf(&csRegex, "(?x:%s)", csRegex.cStr);
     if (csOPtions.cStr[i] == 'i') prxMatcher->ui32Opts |= PCRE2_CASELESS;
     if (csOPtions.cStr[i] == 'm') prxMatcher->ui32Opts |= PCRE2_MULTILINE;
     if (csOPtions.cStr[i] == 's') prxMatcher->ui32Opts |= PCRE2_DOTALL;
@@ -103,12 +106,12 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchS
 
   // Compile regex
   prxMatcher->pRegex = pcre2_compile(
-    (PCRE2_SPTR) pcRegex,   // the pattern
-    PCRE2_ZERO_TERMINATED,  // indicates pattern is zero-terminated
-    prxMatcher->ui32Opts,   // options
-    &iErrNo,                // for error number
-    &iErrOff,               // for error offset
-    NULL                    // use default compile context
+    (PCRE2_SPTR) csRegex.cStr,  // the pattern
+    PCRE2_ZERO_TERMINATED,      // indicates pattern is zero-terminated
+    prxMatcher->ui32Opts,       // options
+    &iErrNo,                    // for error number
+    &iErrOff,                   // for error offset
+    NULL                        // use default compile context
   );
 
   // A fail will set pcsErr with the error string and return RX_ERROR.
@@ -120,6 +123,7 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchS
   }
 
   csFree(&csOPtions);
+  csFree(&csRegex);
 
   return iErr;
 }

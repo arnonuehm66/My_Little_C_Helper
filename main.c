@@ -16,6 +16,7 @@
  ** 10.10.2018  JE    Changed ticks2datetime() to avoid a cstr memory leak.
  ** 13.11.2018  JE    Added PCRE2 wrapper c_my_regex.h v0.1.1.
  ** 13.11.2018  JE    Added '--rx' to test regex with string provided by '-X'.
+ ** 30.11.2018  JE    Now doRegex() uses flags directly and adjustet ouput.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -45,7 +46,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.15"
+#define ME_VERSION "0.0.16"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -583,20 +584,21 @@ void printEntry(int iOffset) {
  * Name:
  * Purpose: .
  *******************************************************************************/
-void doRegex(const char* pcToSearch, const char* pcRegex) {
+void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   t_rx_matcher rxMatcher = {0};
   t_array_cstr dacsMatch = {0};
   cstr         csErr     = csNew("");
   int          iErr      = 0;
 
-  printf("\nMatch: %s\n", pcToSearch);
-  printf("With:  %s\n",   pcRegex);
+  printf("\nMatch: '%s'\n", pcToSearch);
+  printf("With:  '%s'\n",   pcRegex);
+  printf("Flags: '%s'\n",   pcFlags);
 
   // Init cstr array, which holds all macthes.
   dacsInit(&dacsMatch);
 
   // Compile regex and init global matcher struct.
-  if (rxInitMatcher(&rxMatcher, 0, pcToSearch, pcRegex, "", &csErr) != RX_NO_ERROR) {
+  if (rxInitMatcher(&rxMatcher, 0, pcToSearch, pcRegex, pcFlags, &csErr) != RX_NO_ERROR) {
     printf("%s\n", csErr.cStr);
     goto free_and_exit;
   }
@@ -642,11 +644,11 @@ void debug(void) {
 
   // How to assemble regex via cstr variables.
   // "([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})"
-  csSet(&csSubRx, "([0-9a-fA-F]{2})");
-  csSetf(&csRx, "%s:%s:%s:%s:%s", csSubRx.cStr, csSubRx.cStr, csSubRx.cStr, csSubRx.cStr, csSubRx.cStr);
-  doRegex("0f:aa:08:7e:50", csRx.cStr);
+  csSet(&csSubRx, "([0-9A-F]{2})");
+  csSetf(&csRx, "%s : %s : %s : %s : %s", csSubRx.cStr, csSubRx.cStr, csSubRx.cStr, csSubRx.cStr, csSubRx.cStr);
+  doRegex("0f:aa:08:7e:50", csRx.cStr, "xi");
 
-  doRegex(g_tOpts.csOptX.cStr, g_tOpts.csRx.cStr);
+  doRegex(g_tOpts.csOptX.cStr, g_tOpts.csRx.cStr, "");
 
   csFree(&csMin);
   csFree(&csMax);
