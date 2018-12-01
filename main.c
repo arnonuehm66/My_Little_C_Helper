@@ -17,6 +17,7 @@
  ** 13.11.2018  JE    Added PCRE2 wrapper c_my_regex.h v0.1.1.
  ** 13.11.2018  JE    Added '--rx' to test regex with string provided by '-X'.
  ** 30.11.2018  JE    Now doRegex() uses flags directly and adjustet ouput.
+ ** 01.11.2018  JE    Added '--rxF' to add flags to rx compilation.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -46,7 +47,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.16"
+#define ME_VERSION "0.0.17"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -86,6 +87,7 @@ typedef struct {
   int  iOptX;     // Integer verion.
   cstr csOptX;    // String version.
   cstr csRx;
+  cstr csRxF;
   int  iTicksMin;
   int  iTicksMax;
 } t_options;
@@ -130,7 +132,7 @@ void usage(int iErr, char* pcMsg) {
 
   csCat(&csMsg, csMsg.cStr,
 //|************************ 80 chars width ****************************************|
-  "usage: " ME_NAME " [-t] [-o] [-x n] [-X <str> [--rx <regex>]] [-e hex] [ox=hex] [-y yyyy [-Y yyyy]] file1 [file2 ...]\n"
+  "usage: " ME_NAME " [-t] [-o] [-x n] [-X <str> [--rx <regex>] [--rxF <flags>]] [-e hex] [ox=hex] [-y yyyy [-Y yyyy]] file1 [file2 ...]\n"
   "       " ME_NAME " [-h|--help|-v|--version]\n"
   " What the programm should do.\n"
   " '-e' and 'ox=' can be entered as hexadecimal with '0x' prefix or as decimal\n"
@@ -140,6 +142,7 @@ void usage(int iErr, char* pcMsg) {
   "  -x n:          this is an option eating n\n"
   "  -X <str>:      this is an option eating a string\n"
   "  --rx <regex>:  gives an regex to match string provided by '-X'\n"
+  "  --rxF <flags>: flags with wich regex will be compiled (i.e. 'xims')\n"
   "  -e hex:        this is an hex/dec option eating a hex/dec string\n"
   "  ox=hex:        this is an hex/dec option eating a hex/dec string\n"
   "  -y yyyy:       min year to consider a track as valid (default 2002)\n"
@@ -358,7 +361,7 @@ void getOptions(int argc, char* argv[]) {
   cstr csArgv = csNew("");
   cstr csRv   = csNew("");
   cstr csOpt  = csNew("");
-  int  iArg   = 1;  // Omit programm name in arg loop.
+  int  iArg   = 1;  // Omit program name in arg loop.
   int  iChar  = 0;
   char cOpt   = 0;
   int  iRv    = 0;
@@ -373,6 +376,7 @@ void getOptions(int argc, char* argv[]) {
   g_tOpts.iOptX       = 0;
   g_tOpts.csOptX      = csNew("0f:aa:08:7e:50");
   g_tOpts.csRx        = csNew("([0-9a-fA-F]{2})(:?)");
+  g_tOpts.csRxF       = csNew("");
   g_tOpts.iTicksMin   = 2002;   // This will be converted into unix ticks.
   g_tOpts.iTicksMax   = NO_TICK;
 
@@ -405,8 +409,15 @@ next_argument:
       if (!strcmp(csArgv.cStr, "--rx")) {
         shift(&csRv, &iArg, argc, argv);
         if (csRv.len == 0)
-          dispatchError(ERR_ARGS, "OptX is missing");
+          dispatchError(ERR_ARGS, "rx is missing");
         csSet(&g_tOpts.csRx, csRv.cStr);
+        continue;
+      }
+      if (!strcmp(csArgv.cStr, "--rxF")) {
+        shift(&csRv, &iArg, argc, argv);
+        if (csRv.len == 0)
+          dispatchError(ERR_ARGS, "rsF is missing");
+        csSet(&g_tOpts.csRxF, csRv.cStr);
         continue;
       }
       dispatchError(ERR_ARGS, "Invalid long option");
@@ -589,6 +600,7 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   t_array_cstr dacsMatch = {0};
   cstr         csErr     = csNew("");
   int          iErr      = 0;
+  int          fFoundIt  = 0;
 
   printf("\nMatch: '%s'\n", pcToSearch);
   printf("With:  '%s'\n",   pcRegex);
@@ -606,10 +618,14 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   // rxMatch() crams all sub-macthes into cstr array and signals, if matching
   // reached end of string.
   while (rxMatch(&dacsMatch, &rxMatcher, &iErr, &csErr)) {
+    fFoundIt = 1;
     for (int i = 0; i < dacsMatch.iCount; ++i)
       printf("$%d = '%s'\n", i, dacsMatch.pcsData[i].cStr);
     printf("----\n");
   }
+
+  // Print the separator, even when no match occurred.
+  if (!fFoundIt) printf("----\n");
 
   // Free memory of all used structs.
 free_and_exit:
@@ -634,6 +650,7 @@ void debug(void) {
   printf("g_tOpts.iOptX       = %d\n",        g_tOpts.iOptX);
   printf("g_tOpts.csOptX.cStr = '%s'\n",      g_tOpts.csOptX.cStr);
   printf("g_tOpts.csRx.cStr   = '%s'\n",      g_tOpts.csRx.cStr);
+  printf("g_tOpts.csRxF.cStr  = '%s'\n",      g_tOpts.csRxF.cStr);
   printf("g_tOpts.iTicksMin   = %10d (%s)\n", g_tOpts.iTicksMin, csMin.cStr);
   printf("g_tOpts.iTicksMax   = %10d (%s)\n", g_tOpts.iTicksMax, csMax.cStr);
 
@@ -648,7 +665,7 @@ void debug(void) {
   csSetf(&csRx, "%s : %s : %s : %s : %s", csSubRx.cStr, csSubRx.cStr, csSubRx.cStr, csSubRx.cStr, csSubRx.cStr);
   doRegex("0f:aa:08:7e:50", csRx.cStr, "xi");
 
-  doRegex(g_tOpts.csOptX.cStr, g_tOpts.csRx.cStr, "");
+  doRegex(g_tOpts.csOptX.cStr, g_tOpts.csRx.cStr, g_tOpts.csRxF.cStr);
 
   csFree(&csMin);
   csFree(&csMax);
