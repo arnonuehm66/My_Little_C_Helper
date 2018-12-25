@@ -18,6 +18,7 @@
  ** 13.11.2018  JE    Added '--rx' to test regex with string provided by '-X'.
  ** 30.11.2018  JE    Now doRegex() uses flags directly and adjustet ouput.
  ** 01.11.2018  JE    Added '--rxF' to add flags to rx compilation.
+ ** 24.12.2018  JE    Simplified version().
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -47,7 +48,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.17"
+#define ME_VERSION "0.0.18"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -109,13 +110,7 @@ t_array_cstr g_tArgs; // Free arguments.
  * Purpose: Print version and exit program.
  *******************************************************************************/
 void version(void) {
-  cstr csOut = csNew(ME_NAME);
-
-  csCat(&csOut, csOut.cStr, " v" ME_VERSION);
-  printf("%s\n", csOut.cStr);
-
-  csFree(&csOut);
-
+  printf("%s v%s\n", ME_NAME, ME_VERSION);
   exit(ERR_NOERR);
 }
 
@@ -247,7 +242,7 @@ void ticks2datetime(cstr* pcsTxt, const char* pacTxt, time_t tTicks) {
 
 /*******************************************************************************
  * Name:  datetime2ticks
- * Purpose: Converts ""2017/11/03, 11:14:23 (UTC)" string to ticks.
+ * Purpose: Converts "2017/11/03, 11:14:23 (UTC)" string to ticks.
  *******************************************************************************/
 time_t datetime2ticks(int fUseString, const char* pcTime,
                       int iYear, int iMonth, int iDay,
