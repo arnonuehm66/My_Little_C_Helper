@@ -168,8 +168,8 @@ void dispatchError(int rv, char* pcMsg) {
   if (rv == ERR_NOERR) return;
 
   if (rv == ERR_ARGS) csSet(&csErr, sERR_ARGS);
-  if (rv == ERR_FILE) csSet(&csErr, sERR_ARGS);
-  if (rv == ERR_ELSE) csSet(&csErr, sERR_ARGS);
+  if (rv == ERR_FILE) csSet(&csErr, sERR_FILE);
+  if (rv == ERR_ELSE) csSet(&csErr, sERR_ELSE);
 
   // Set to '<err>: <message>', if a message was given.
   if (csMsg.len != 0) csSetf(&csErr, "%s: %s", csErr.cStr, csMsg.cStr);
