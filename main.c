@@ -242,7 +242,7 @@ void ticks2datetime(cstr* pcsTxt, const char* pacTxt, time_t tTicks) {
 
 /*******************************************************************************
  * Name:  datetime2ticks
- * Purpose: Converts "2017/11/03, 11:14:23 (UTC)" string to ticks.
+ * Purpose: Converts "2017/11/03, 11:14:23" string to ticks.
  *******************************************************************************/
 time_t datetime2ticks(int fUseString, const char* pcTime,
                       int iYear, int iMonth, int iDay,
@@ -250,9 +250,9 @@ time_t datetime2ticks(int fUseString, const char* pcTime,
   cstr      csItem  = csNew("");
   struct tm sTime   = {0};
 
-  //                   1111111111222222
-  //         01234567890123456789012345
-  // Assume "2017/11/03, 11:14:23 (UTC)"
+  //                   1111111111
+  //         01234567890123456789
+  // Assume "2017/11/03, 11:14:23"
   if (fUseString) {
     csMid(&csItem, pcTime,  0, 4);
     iYear = (int) cstr2ll(csItem);
