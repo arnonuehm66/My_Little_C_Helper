@@ -20,7 +20,7 @@
  ** 01.11.2018  JE    Added '--rxF' to add flags to rx compilation.
  ** 24.12.2018  JE    Simplified version().
  ** 10.01.2019  JE    Added 'typedef long int li'.
- ** 31.01.2019  JE    Now uses c_string_v0.9.2.h with improved csSet().
+ ** 31.01.2019  JE    Now uses c_string_v0.9.3.h with improved csSet().
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
