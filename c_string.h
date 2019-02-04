@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.9.2
+ ** Version: v0.9.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -23,6 +23,9 @@
  ** 28.08.2018  JE    Added csHhex2ll() and ll2csHhex().
  ** 11.09.2018  JE    Added csSetf() to mimik a secure sprinf().
  ** 21.10.2018  JE    Now cstr do make no unecessary reallocations.
+ ** 31.01.2019  JE    Added 'csTmp' in 'csSet()', because 'pcString' could be
+ **                   a copy of 'pcsString.cStr', and therefore been cleared
+ **                   prior usage!
  *******************************************************************************/
 
 
@@ -229,8 +232,11 @@ void csFree(cstr* pcsString) {
  * Name: csSet
  *******************************************************************************/
 void csSet(cstr* pcsString, const char* pcString) {
+  // Watch out, 'pcString' could be a copy of 'pcsString.cStr'!
+  cstr csTmp = csNew(pcString);
   csFree(pcsString);
-  *pcsString = csNew(pcString);
+  *pcsString = csNew(csTmp.cStr);
+  csFree(&csTmp);
 }
 
 /*******************************************************************************

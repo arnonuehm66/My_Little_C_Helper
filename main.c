@@ -19,6 +19,8 @@
  ** 30.11.2018  JE    Now doRegex() uses flags directly and adjustet ouput.
  ** 01.11.2018  JE    Added '--rxF' to add flags to rx compilation.
  ** 24.12.2018  JE    Simplified version().
+ ** 10.01.2019  JE    Added 'typedef long int li'.
+ ** 31.01.2019  JE    Now uses c_string_v0.9.2.h with improved csSet().
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -48,7 +50,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.18"
+#define ME_VERSION "0.0.20"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -76,6 +78,7 @@ typedef unsigned int  uint;
 typedef unsigned char uchar;
 typedef long double   ldbl;
 typedef long long     ll;
+typedef long int      li;
 //typedef int           bool;
 //const   int           false = 0;
 //const   int           true  = 1;
