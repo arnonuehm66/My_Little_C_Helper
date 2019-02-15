@@ -21,6 +21,7 @@
  ** 24.12.2018  JE    Simplified version().
  ** 10.01.2019  JE    Added 'typedef long int li'.
  ** 31.01.2019  JE    Now uses c_string_v0.9.3.h with improved csSet().
+ ** 12.02.2019  JE    Now free csItem in datetime2ticks() to avoid memory leak.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -50,7 +51,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.20"
+#define ME_VERSION "0.0.21"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -289,6 +290,8 @@ time_t datetime2ticks(int fUseString, const char* pcTime,
   sTime.tm_sec  = iSec;     // Seconds. [0-60] (1 leap second)
 
   sTime.tm_isdst = -1;
+
+  csFree(&csItem);
 
   // Just tick away ...
   return mktime(&sTime) - timezone;
