@@ -2,7 +2,7 @@
  ** Name: c_dynamic_array.h
  ** Purpose:  Provides differend types of dynamic arrays.
  ** Author: (JE) Jens Elstner
- ** Version: v0.2.1
+ ** Version: v0.3.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -11,6 +11,10 @@
  ** 22.02.2018  JE    Added 'Capacity' to all structs.
  ** 22.02.2018  JE    Now reallocate just when capacity is full in 'daXAdd()'.
  ** 22.02.2018  JE    Added daXFree() functions.
+ ** 07.03.2019  JE    Now structs are all named.
+ ** 18.04.2019  JE    Added dabXXX() functions for byte handling.
+ ** 23.04.2019  JE    Changed xCount and xCapacity vars form int to size_t.
+ ** 23.04.2019  JE    Changed xData vars to appropriate names.
  *******************************************************************************/
 
 
@@ -37,23 +41,29 @@
 //******************************************************************************
 //* type definition
 
-typedef struct {
-  cstr* pcsData;
-  int   iCount;
-  int   iCapacity;
+typedef struct s_array_cstr {
+  cstr*  pStr;
+  size_t sCount;
+  size_t sCapacity;
 } t_array_cstr;
 
-typedef struct {
-  int* piData;
-  int  iCount;
-  int  iCapacity;
+typedef struct s_array_int {
+  int*   pInt;
+  size_t sCount;
+  size_t sCapacity;
 } t_array_int;
 
-typedef struct {
-  unsigned int* puiData;
-  unsigned int  uiCount;
-  unsigned int  uiCapacity;
+typedef struct s_array_uint {
+  unsigned int* pUInt;
+  size_t        sCount;
+  size_t        sCapacity;
 } t_array_uint;
+
+typedef struct s_array_bytes {
+  unsigned char* pBytes;
+  size_t         sCount;
+  size_t         sCapacity;
+} t_array_byte;
 
 
 //******************************************************************************
@@ -78,6 +88,12 @@ void dauiAdd(t_array_uint* ptArray, unsigned int uiValue);
 void dauiClear(t_array_uint* ptArray);
 void dauiFree(t_array_uint* ptArray);
 
+// byte aka unsigned char
+void dabInit(t_array_byte* ptArray);
+void dabAdd(t_array_byte* ptArray, unsigned char bValue);
+void dabClear(t_array_byte* ptArray);
+void dabFree(t_array_byte* ptArray);
+
 
 //******************************************************************************
 //* cstr
@@ -87,24 +103,24 @@ void dauiFree(t_array_uint* ptArray);
  * Purpose: Initialze dynamic array of cstr.
  *******************************************************************************/
 void dacsInit(t_array_cstr* ptArray) {
-  ptArray->iCount    = 0;
-  ptArray->iCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
-  ptArray->pcsData   = (cstr*) malloc(sizeof(cstr) * ptArray->iCapacity);
+  ptArray->sCount    = 0;
+  ptArray->sCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
+  ptArray->pStr   = (cstr*) malloc(sizeof(cstr) * ptArray->sCapacity);
 }
 
 /*******************************************************************************
  * Name:  dacsAdd
- * Purpose: Adds a cstr value to a dynamic array.
+ * Purpose: Adds a value to a dynamic array.
  *******************************************************************************/
 void dacsAdd(t_array_cstr* ptArray, const char *pcValue) {
   // Check and double cap, if necessary.
-  if (ptArray->iCount + 1 > ptArray->iCapacity) {
-    ptArray->iCapacity *= 2;
-    ptArray->pcsData    = (cstr*) realloc(ptArray->pcsData, sizeof(cstr) * ptArray->iCapacity);
+  if (ptArray->sCount + 1 > ptArray->sCapacity) {
+    ptArray->sCapacity *= 2;
+    ptArray->pStr    = (cstr*) realloc(ptArray->pStr, sizeof(cstr) * ptArray->sCapacity);
   }
 
   // Set value in next slot and increment counter.
-  csSet(&ptArray->pcsData[ptArray->iCount++], pcValue);
+  csSet(&ptArray->pStr[ptArray->sCount++], pcValue);
 }
 
 
@@ -122,8 +138,8 @@ void dacsClear(t_array_cstr* ptArray) {
  * Purpose: Free memory of dynamic array.
  *******************************************************************************/
 void dacsFree(t_array_cstr* ptArray) {
-  if (ptArray->pcsData != NULL)
-    free(ptArray->pcsData);
+  if (ptArray->pStr != NULL)
+    free(ptArray->pStr);
 }
 
 
@@ -135,24 +151,24 @@ void dacsFree(t_array_cstr* ptArray) {
  * Purpose: Initialze dynamic array of int.
  *******************************************************************************/
 void daiInit(t_array_int* ptArray) {
-  ptArray->iCount    = 0;
-  ptArray->iCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
-  ptArray->piData    = (int*) malloc(sizeof(int) * ptArray->iCapacity);
+  ptArray->sCount    = 0;
+  ptArray->sCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
+  ptArray->pInt    = (int*) malloc(sizeof(int) * ptArray->sCapacity);
 }
 
 /*******************************************************************************
  * Name:  daiAdd
- * Purpose: Adds a cstr value to a dynamic array.
+ * Purpose: Adds a value to a dynamic array.
  *******************************************************************************/
 void daiAdd(t_array_int* ptArray, int iValue) {
   // Check and double cap, if necessary.
-  if (ptArray->iCount + 1 > ptArray->iCapacity) {
-    ptArray->iCapacity *= 2;
-    ptArray->piData     = (int*) realloc(ptArray->piData, sizeof(int) * ptArray->iCapacity);
+  if (ptArray->sCount + 1 > ptArray->sCapacity) {
+    ptArray->sCapacity *= 2;
+    ptArray->pInt     = (int*) realloc(ptArray->pInt, sizeof(int) * ptArray->sCapacity);
   }
 
   // Set value in next slot and increment counter.
-  ptArray->piData[ptArray->iCount++] = iValue;
+  ptArray->pInt[ptArray->sCount++] = iValue;
 }
 
 /*******************************************************************************
@@ -169,8 +185,8 @@ void daiClear(t_array_int* ptArray) {
  * Purpose: Free memory of dynamic array.
  *******************************************************************************/
 void daiFree(t_array_int* ptArray) {
-  if (ptArray->piData != NULL)
-    free(ptArray->piData);
+  if (ptArray->pInt != NULL)
+    free(ptArray->pInt);
 }
 
 
@@ -179,27 +195,27 @@ void daiFree(t_array_int* ptArray) {
 
 /*******************************************************************************
  * Name:  dauiInit
- * Purpose: Initialze dynamic array of int.
+ * Purpose: Initialze dynamic array of ubsigned int.
  *******************************************************************************/
 void dauiInit(t_array_uint* ptArray) {
-  ptArray->uiCount    = 0;
-  ptArray->uiCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
-  ptArray->puiData    = (unsigned int*) malloc(sizeof(unsigned int) * ptArray->uiCapacity);
+  ptArray->sCount    = 0;
+  ptArray->sCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
+  ptArray->pUInt    = (unsigned int*) malloc(sizeof(unsigned int) * ptArray->sCapacity);
 }
 
 /*******************************************************************************
  * Name:  dauiAdd
- * Purpose: Adds a cstr value to a dynamic array.
+ * Purpose: Adds a value to a dynamic array.
  *******************************************************************************/
 void dauiAdd(t_array_uint* ptArray, unsigned int uiValue) {
   // Check and double cap, if necessary.
-  if (ptArray->uiCount + 1 > ptArray->uiCapacity) {
-    ptArray->uiCapacity *= 2;
-    ptArray->puiData     = (unsigned int*) realloc(ptArray->puiData, sizeof(unsigned int) * ptArray->uiCapacity);
+  if (ptArray->sCount + 1 > ptArray->sCapacity) {
+    ptArray->sCapacity *= 2;
+    ptArray->pUInt     = (unsigned int*) realloc(ptArray->pUInt, sizeof(unsigned int) * ptArray->sCapacity);
   }
 
   // Set value in next slot and increment counter.
-  ptArray->puiData[ptArray->uiCount++] = uiValue;
+  ptArray->pUInt[ptArray->sCount++] = uiValue;
 }
 
 /*******************************************************************************
@@ -216,8 +232,54 @@ void dauiClear(t_array_uint* ptArray) {
  * Purpose: Free memory of dynamic array.
  *******************************************************************************/
 void dauiFree(t_array_uint* ptArray) {
-  if (ptArray->puiData != NULL)
-    free(ptArray->puiData);
+  if (ptArray->pUInt != NULL)
+    free(ptArray->pUInt);
+}
+
+//******************************************************************************
+//* byte aka unsigned char
+
+/*******************************************************************************
+ * Name:  dabInit
+ * Purpose: Initialze dynamic array of bytes.
+ *******************************************************************************/
+void dabInit(t_array_byte *ptArray) {
+  ptArray->sCount    = 0;
+  ptArray->sCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
+  ptArray->pBytes    = (unsigned char*) malloc(sizeof(unsigned char) * ptArray->sCapacity);
+}
+
+/*******************************************************************************
+ * Name:  dabAdd
+ * Purpose: Adds a value to a dynamic array.
+ *******************************************************************************/
+void dabAdd(t_array_byte *ptArray, unsigned char bValue) {
+  // Check and double cap, if necessary.
+  if (ptArray->sCount + 1 > ptArray->sCapacity) {
+    ptArray->sCapacity *= 2;
+    ptArray->pBytes     = (unsigned char*) realloc(ptArray->pBytes, sizeof(unsigned char) * ptArray->sCapacity);
+  }
+
+  // Set value in next slot and increment counter.
+  ptArray->pBytes[ptArray->sCount++] = bValue;
+}
+
+/*******************************************************************************
+ * Name:  dabClear
+ * Purpose: Reset dynamic array.
+ *******************************************************************************/
+void dabClear(t_array_byte *ptArray) {
+  dabFree(ptArray);
+  dabInit(ptArray);
+}
+
+/*******************************************************************************
+ * Name:  dabFree
+ * Purpose: Free memory of dynamic array.
+ *******************************************************************************/
+void dabFree(t_array_byte *ptArray) {
+  if (ptArray->pBytes != NULL)
+    free(ptArray->pBytes);
 }
 
 

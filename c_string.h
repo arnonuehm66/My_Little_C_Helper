@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.9.3
+ ** Version: v0.9.5
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -26,6 +26,8 @@
  ** 31.01.2019  JE    Added 'csTmp' in 'csSet()', because 'pcString' could be
  **                   a copy of 'pcsString.cStr', and therefore been cleared
  **                   prior usage!
+ ** 07.03.2019  JE    Now structs are all named.
+ ** 23.04.2019  JE    Minor corrections and optimisations.
  *******************************************************************************/
 
 
@@ -56,7 +58,7 @@
 //* type definition
 
 // Central struct, which defines a cstr 'object'.
-typedef struct {
+typedef struct s_cstr {
   int   len;      // length of cstr
   int   size;     // size of array
   int   capacity; // total available slots
@@ -106,8 +108,7 @@ long long   csHex2ll(cstr csValue);
  * Name: cstr_init
  *******************************************************************************/
 void cstr_init(cstr* pcString) {
-  if (pcString->cStr != NULL)
-    free(pcString->cStr);
+  if (pcString->cStr != NULL) free(pcString->cStr);
   pcString->len      = 0;
   pcString->size     = 1;
   pcString->capacity = C_STRING_INITIAL_CAPACITY;
@@ -129,7 +130,6 @@ void cstr_check(cstr* pcString) {
       pcString->len      != cstr_len(pcString->cStr)) {
     pcString->cStr = NULL;
     cstr_init(pcString);
-    return;
   }
 }
 
@@ -138,12 +138,10 @@ void cstr_check(cstr* pcString) {
  *******************************************************************************/
 void cstr_double_capacity_if_full(cstr* pcString, int iSize) {
   // Avoid unnecessary reallocations.
-  if (pcString->size + iSize <= pcString->capacity)
-    return;
+  if (pcString->size + iSize <= pcString->capacity) return;
 
   // Increase capacity until new size fits.
-  while (pcString->size + iSize > pcString->capacity)
-    pcString->capacity *= 2;
+  while (pcString->size + iSize > pcString->capacity) pcString->capacity *= 2;
 
   // Reallocate new memory.
   pcString->cStr = realloc(pcString->cStr, sizeof(char) * pcString->capacity);
@@ -154,8 +152,7 @@ void cstr_double_capacity_if_full(cstr* pcString, int iSize) {
  *******************************************************************************/
 int cstr_len(const char* pcString) {
   int i = 0;
-  while (pcString[i] != '\0')
-    ++i;
+  while (pcString[i] != '\0') ++i;
   return i;
 }
 
@@ -164,15 +161,14 @@ int cstr_len(const char* pcString) {
  *******************************************************************************/
 int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
   if (bWithNewLines) {
-    if (cChar == ' ' || cChar == '\t' || cChar == '\n' || cChar == '\r')
-      return 1;
-    return 0;
+    if (cChar == ' '  || cChar == '\t' ||
+        cChar == '\n' || cChar == '\r') return 1;
   }
   else {
-    if (cChar == ' ' || cChar == '\t')
-      return 1;
-    return 0;
+    if (cChar == ' '  || cChar == '\t') return 1;
   }
+
+  return 0;
 }
 
 
@@ -216,8 +212,7 @@ void csClear(cstr* pcsString) {
  * Name: csFree
  *******************************************************************************/
 void csFree(cstr* pcsString) {
-  if (pcsString->cStr != NULL)
-    free(pcsString->cStr);
+  if (pcsString->cStr != NULL) free(pcsString->cStr);
   pcsString->len      = 0;
   pcsString->size     = 0;
   pcsString->capacity = 0;
@@ -434,8 +429,7 @@ int csInput(const char* pcMsg, cstr* pcsDest) {
     }
 
     // Take care of the '\n'.
-    if ((char) iChar == '\n')
-      return 0;
+    if ((char) iChar == '\n') return 0;
 
     // Create a minute string of one char.
     acChar[0] = (char) iChar;
@@ -513,8 +507,7 @@ long long csHex2ll(cstr csValue) {
 
   // Delete possible '0x' prior conversion.
   csMid(&csPre, csHex.cStr, 0, 2);
-  if (!strcmp(csPre.cStr, "0x"))
-    csMid(&csHex, csHex.cStr, 2, -1);
+  if (!strcmp(csPre.cStr, "0x")) csMid(&csHex, csHex.cStr, 2, -1);
 
   llVal = strtoll(csHex.cStr, NULL, 16);
 

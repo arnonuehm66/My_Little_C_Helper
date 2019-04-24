@@ -22,6 +22,8 @@
  ** 10.01.2019  JE    Added 'typedef long int li'.
  ** 31.01.2019  JE    Now uses c_string_v0.9.3.h with improved csSet().
  ** 12.02.2019  JE    Now free csItem in datetime2ticks() to avoid memory leak.
+ ** 07.03.2019  JE    Now structs are all named.
+ ** 23.04.2019  JE    Now use c_dynamic_arrays.h v0.3.3.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -51,7 +53,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.21"
+#define ME_VERSION "0.0.24"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -85,7 +87,7 @@ typedef long int      li;
 //const   int           true  = 1;
 
 // Arguments and options.
-typedef struct {
+typedef struct s_optopns {
   long lByteOff;
   int  iTestMode;
   int  iPrtOff;
@@ -122,7 +124,7 @@ void version(void) {
  * Name:  usage
  * Purpose: Print help text and exit program.
  *******************************************************************************/
-void usage(int iErr, char* pcMsg) {
+void usage(int iErr, const char* pcMsg) {
   cstr csMsg = csNew(pcMsg);
 
   // Print at least one newline with message.
@@ -165,7 +167,7 @@ void usage(int iErr, char* pcMsg) {
  * Name:  dispatchError
  * Purpose: Print out specific error message, if any occurres.
  *******************************************************************************/
-void dispatchError(int rv, char* pcMsg) {
+void dispatchError(int rv, const char* pcMsg) {
   cstr csMsg = csNew(pcMsg);
   cstr csErr = csNew("");
 
@@ -503,7 +505,7 @@ next_argument:
   }
 
   // Sanity check of arguments and flags.
-  if (g_tArgs.iCount == 0)
+  if (g_tArgs.sCount == 0)
     dispatchError(ERR_ARGS, "No file");
 
   if (g_tOpts.iTicksMin < 1970 || g_tOpts.iTicksMin > 2038)
@@ -593,8 +595,8 @@ void printEntry(int iOffset) {
 }
 
 /*******************************************************************************
- * Name:
- * Purpose: .
+ * Name:  doRegex
+ * Purpose: Takes string, regex and flags to perform a Perl compatible search.
  *******************************************************************************/
 void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   t_rx_matcher rxMatcher = {0};
@@ -620,8 +622,8 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   // reached end of string.
   while (rxMatch(&dacsMatch, &rxMatcher, &iErr, &csErr)) {
     fFoundIt = 1;
-    for (int i = 0; i < dacsMatch.iCount; ++i)
-      printf("$%d = '%s'\n", i, dacsMatch.pcsData[i].cStr);
+    for (int i = 0; i < dacsMatch.sCount; ++i)
+      printf("$%d = '%s'\n", i, dacsMatch.pStr[i].cStr);
     printf("----\n");
   }
 
@@ -656,9 +658,9 @@ void debug(void) {
   printf("g_tOpts.iTicksMax   = %10d (%s)\n", g_tOpts.iTicksMax, csMax.cStr);
 
   printf("Free argument's dynamic array: ");
-  for (int i = 0; i < g_tArgs.iCount - 1; ++i)
-    printf("%s, ", g_tArgs.pcsData[i].cStr);
-  printf("%s\n", g_tArgs.pcsData[g_tArgs.iCount - 1].cStr);
+  for (int i = 0; i < g_tArgs.sCount - 1; ++i)
+    printf("%s, ", g_tArgs.pStr[i].cStr);
+  printf("%s\n", g_tArgs.pStr[g_tArgs.sCount - 1].cStr);
 
   // How to assemble regex via cstr variables.
   // "([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})"
@@ -694,10 +696,10 @@ int main(int argc, char *argv[]) {
   printHeader();
 
   // Get all data from all files.
-  for (int i = 0; i < g_tArgs.iCount; ++i) {
-    if (!(hFile = fopen(g_tArgs.pcsData[i].cStr, "rb"))) {
+  for (int i = 0; i < g_tArgs.sCount; ++i) {
+    if (!(hFile = fopen(g_tArgs.pStr[i].cStr, "rb"))) {
       cstr csMsg = csNew("");
-      csSetf(&csMsg, "Can't open '%s'", g_tArgs.pcsData[i].cStr);
+      csSetf(&csMsg, "Can't open '%s'", g_tArgs.pStr[i].cStr);
       dispatchError(ERR_FILE, csMsg.cStr);
     }
 //-- file ----------------------------------------------------------------------

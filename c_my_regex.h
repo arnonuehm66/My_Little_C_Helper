@@ -2,12 +2,13 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.1.2
+ ** Version: v0.1.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
  ** 19.09.2018  JE    Created version 0.0.1
  ** 30.11.2018  JE    Changed processing of flag 'x'.
+ ** 07.03.2019  JE    Now structs are all named.
  *******************************************************************************/
 
 
@@ -48,12 +49,12 @@
 //* type definition
 
 // Control struct for global matching.
-typedef struct {
+typedef struct s_rx_matcher {
   int               iPos;
   pcre2_match_data* pMatchData;
   pcre2_code*       pRegex;
   PCRE2_SPTR        pcSubject;
-  size_t            iSubjectLength;
+  size_t            sSubjectLength;
   uint32_t          ui32Opts;
 } t_rx_matcher;
 
@@ -88,11 +89,11 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchS
   prxMatcher->pMatchData     = NULL;
   prxMatcher->pRegex         = NULL;
   prxMatcher->pcSubject      = NULL;
-  prxMatcher->iSubjectLength = 0;
+  prxMatcher->sSubjectLength = 0;
   prxMatcher->ui32Opts       = 0;
 
   // Convert option string into options and init everything to work global.
-  // Because PCRE2_EXTENDED don't work, I use the implizit form '(?x:)'.
+  // Because PCRE2_EXTENDED don't work, I use the implicit form '(?x:...)'.
   for (int i = 0; i < csOPtions.len; ++i) {
     if (csOPtions.cStr[i] == 'x') csSetf(&csRegex, "(?x:%s)", csRegex.cStr);
     if (csOPtions.cStr[i] == 'i') prxMatcher->ui32Opts |= PCRE2_CASELESS;
@@ -102,7 +103,7 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchS
 
   // Cast to 'char*' works, because of 8 bit code-unit width.
   prxMatcher->pcSubject      = (PCRE2_SPTR) pcSearchStr;
-  prxMatcher->iSubjectLength = strlen(pcSearchStr);
+  prxMatcher->sSubjectLength = strlen(pcSearchStr);
 
   // Compile regex
   prxMatcher->pRegex = pcre2_compile(
@@ -142,7 +143,7 @@ void rxDelMatcher(t_rx_matcher* prxMatcher) {
 int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr, cstr *pcsErr) {
   PCRE2_SPTR  pcSubStr    = NULL;
   cstr        csSubStr    = csNew("");
-  size_t      iSubStrLen  = 0;
+  size_t      sSubStrLen  = 0;
   int         iMatchCount = 0;
   int         iStart      = 0;
   int         iEnd        = 0;
@@ -162,7 +163,7 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
   iMatchCount = pcre2_match(
     prxMatcher->pRegex,           // the compiled pattern
     prxMatcher->pcSubject,        // the subject string
-    prxMatcher->iSubjectLength,   // the length of the subject
+    prxMatcher->sSubjectLength,   // the length of the subject
     prxMatcher->iPos,             // start at offset iPos
     prxMatcher->ui32Opts,         // options
     prxMatcher->pMatchData,       // block for storing the result
@@ -205,10 +206,10 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
 
     // Get offset and length of a match ...
     pcSubStr   = prxMatcher->pcSubject + piOvector[iStart];
-    iSubStrLen = piOvector[iEnd] - piOvector[iStart];
+    sSubStrLen = piOvector[iEnd] - piOvector[iStart];
 
     // ... and add it to the dynamic array via temporary cstr.
-    csSetf(&csSubStr, "%.*s", iSubStrLen, pcSubStr);
+    csSetf(&csSubStr, "%.*s", sSubStrLen, pcSubStr);
     dacsAdd(pdacsSubMatches, csSubStr.cStr);
   }
 
@@ -224,7 +225,7 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
     goto free_and_exit;
   }
 
-  if (piOvector[0] >= prxMatcher->iSubjectLength) {
+  if (piOvector[0] >= prxMatcher->sSubjectLength) {
     csSet(pcsErr, "End of subject");
     *piErr = RX_NO_ERROR;
     iRv    = RX_RV_END;
