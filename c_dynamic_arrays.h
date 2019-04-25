@@ -105,7 +105,7 @@ void dabFree(t_array_byte* ptArray);
 void dacsInit(t_array_cstr* ptArray) {
   ptArray->sCount    = 0;
   ptArray->sCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
-  ptArray->pStr   = (cstr*) malloc(sizeof(cstr) * ptArray->sCapacity);
+  ptArray->pStr      = (cstr*) malloc(sizeof(cstr) * ptArray->sCapacity);
 }
 
 /*******************************************************************************
@@ -116,7 +116,7 @@ void dacsAdd(t_array_cstr* ptArray, const char *pcValue) {
   // Check and double cap, if necessary.
   if (ptArray->sCount + 1 > ptArray->sCapacity) {
     ptArray->sCapacity *= 2;
-    ptArray->pStr    = (cstr*) realloc(ptArray->pStr, sizeof(cstr) * ptArray->sCapacity);
+    ptArray->pStr       = (cstr*) realloc(ptArray->pStr, sizeof(cstr) * ptArray->sCapacity);
   }
 
   // Set value in next slot and increment counter.
@@ -153,7 +153,7 @@ void dacsFree(t_array_cstr* ptArray) {
 void daiInit(t_array_int* ptArray) {
   ptArray->sCount    = 0;
   ptArray->sCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
-  ptArray->pInt    = (int*) malloc(sizeof(int) * ptArray->sCapacity);
+  ptArray->pInt      = (int*) malloc(sizeof(int) * ptArray->sCapacity);
 }
 
 /*******************************************************************************
@@ -164,7 +164,7 @@ void daiAdd(t_array_int* ptArray, int iValue) {
   // Check and double cap, if necessary.
   if (ptArray->sCount + 1 > ptArray->sCapacity) {
     ptArray->sCapacity *= 2;
-    ptArray->pInt     = (int*) realloc(ptArray->pInt, sizeof(int) * ptArray->sCapacity);
+    ptArray->pInt       = (int*) realloc(ptArray->pInt, sizeof(int) * ptArray->sCapacity);
   }
 
   // Set value in next slot and increment counter.
@@ -200,7 +200,7 @@ void daiFree(t_array_int* ptArray) {
 void dauiInit(t_array_uint* ptArray) {
   ptArray->sCount    = 0;
   ptArray->sCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
-  ptArray->pUInt    = (unsigned int*) malloc(sizeof(unsigned int) * ptArray->sCapacity);
+  ptArray->pUInt     = (unsigned int*) malloc(sizeof(unsigned int) * ptArray->sCapacity);
 }
 
 /*******************************************************************************
@@ -211,7 +211,7 @@ void dauiAdd(t_array_uint* ptArray, unsigned int uiValue) {
   // Check and double cap, if necessary.
   if (ptArray->sCount + 1 > ptArray->sCapacity) {
     ptArray->sCapacity *= 2;
-    ptArray->pUInt     = (unsigned int*) realloc(ptArray->pUInt, sizeof(unsigned int) * ptArray->sCapacity);
+    ptArray->pUInt      = (unsigned int*) realloc(ptArray->pUInt, sizeof(unsigned int) * ptArray->sCapacity);
   }
 
   // Set value in next slot and increment counter.
