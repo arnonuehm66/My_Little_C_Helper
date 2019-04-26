@@ -24,6 +24,7 @@
  ** 12.02.2019  JE    Now free csItem in datetime2ticks() to avoid memory leak.
  ** 07.03.2019  JE    Now structs are all named.
  ** 23.04.2019  JE    Now use c_dynamic_arrays.h v0.3.3.
+ ** 24.04.2019  JE    Changed int's to -time_t's ticks.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -53,7 +54,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.24"
+#define ME_VERSION "0.0.25"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -88,15 +89,15 @@ typedef long int      li;
 
 // Arguments and options.
 typedef struct s_optopns {
-  long lByteOff;
-  int  iTestMode;
-  int  iPrtOff;
-  int  iOptX;     // Integer verion.
-  cstr csOptX;    // String version.
-  cstr csRx;
-  cstr csRxF;
-  int  iTicksMin;
-  int  iTicksMax;
+  long   lByteOff;
+  int    iTestMode;
+  int    iPrtOff;
+  int    iOptX;     // Integer verion.
+  cstr   csOptX;    // String version.
+  cstr   csRx;
+  cstr   csRxF;
+  time_t tTicksMin;
+  time_t tTicksMax;
 } t_options;
 
 
@@ -380,8 +381,8 @@ void getOptions(int argc, char* argv[]) {
   g_tOpts.csOptX      = csNew("0f:aa:08:7e:50");
   g_tOpts.csRx        = csNew("([0-9a-fA-F]{2})(:?)");
   g_tOpts.csRxF       = csNew("");
-  g_tOpts.iTicksMin   = 2002;   // This will be converted into unix ticks.
-  g_tOpts.iTicksMax   = NO_TICK;
+  g_tOpts.tTicksMin   = 2002;   // This will be converted into unix ticks.
+  g_tOpts.tTicksMax   = NO_TICK;
 
   // Init free argument's dynamic array.
   dacsInit(&g_tArgs);
@@ -473,14 +474,14 @@ next_argument:
           shift(&csRv, &iArg, argc, argv);
           if (csRv.len == 0 || isNumber(csRv, &iSign) != NUM_INT)
             dispatchError(ERR_ARGS, "Min year is missing");
-          g_tOpts.iTicksMin = (int) cstr2ll(csRv);
+          g_tOpts.tTicksMin = (int) cstr2ll(csRv);
           continue;
         }
         if (cOpt == 'Y') {
           shift(&csRv, &iArg, argc, argv);
           if (csRv.len == 0 || isNumber(csRv, &iSign) != NUM_INT)
             dispatchError(ERR_ARGS, "Max year is missing");
-          g_tOpts.iTicksMax = (int) cstr2ll(csRv);
+          g_tOpts.tTicksMax = (int) cstr2ll(csRv);
           continue;
         }
         dispatchError(ERR_ARGS, "Invalid short option");
@@ -508,22 +509,22 @@ next_argument:
   if (g_tArgs.sCount == 0)
     dispatchError(ERR_ARGS, "No file");
 
-  if (g_tOpts.iTicksMin < 1970 || g_tOpts.iTicksMin > 2038)
+  if (g_tOpts.tTicksMin < 1970 || g_tOpts.tTicksMin > 2038)
     dispatchError(ERR_ARGS, "Min year out of limits (1970 - 2038)");
 
-  if (g_tOpts.iTicksMax != NO_TICK &&
-     (g_tOpts.iTicksMax < 1970 || g_tOpts.iTicksMax > 2038))
+  if (g_tOpts.tTicksMax != NO_TICK &&
+     (g_tOpts.tTicksMax < 1970 || g_tOpts.tTicksMax > 2038))
     dispatchError(ERR_ARGS, "Max year out of limits (1970 - 2038)");
 
   // Get timestamps limits for verification.
-  g_tOpts.iTicksMin = datetime2ticks(0, "", g_tOpts.iTicksMin, 1, 1, 0, 0, 0);
-  if (g_tOpts.iTicksMax == NO_TICK)
-    g_tOpts.iTicksMax = time(NULL);
+  g_tOpts.tTicksMin = datetime2ticks(0, "", g_tOpts.tTicksMin, 1, 1, 0, 0, 0);
+  if (g_tOpts.tTicksMax == NO_TICK)
+    g_tOpts.tTicksMax = time(NULL);
   else
     // To fit this year it must end 1 sec befor end of last year!
-    g_tOpts.iTicksMax = datetime2ticks(0, "", g_tOpts.iTicksMax - 1, 12, 31, 23, 59, 59);
+    g_tOpts.tTicksMax = datetime2ticks(0, "", g_tOpts.tTicksMax - 1, 12, 31, 23, 59, 59);
 
-  if (g_tOpts.iTicksMin >= g_tOpts.iTicksMax)
+  if (g_tOpts.tTicksMin >= g_tOpts.tTicksMax)
     dispatchError(ERR_ARGS, "'-Y' should be grater than '-y'");
 
   // Free string memory.
@@ -645,8 +646,8 @@ void debug(void) {
   cstr csSubRx = csNew("");
   cstr csRx    = csNew("");
 
-  ticks2datetime(&csMin, " (UTC)", g_tOpts.iTicksMin);
-  ticks2datetime(&csMax, " (UTC)", g_tOpts.iTicksMax);
+  ticks2datetime(&csMin, " (UTC)", g_tOpts.tTicksMin);
+  ticks2datetime(&csMax, " (UTC)", g_tOpts.tTicksMax);
 
   printf("g_tOpts.iTestMode   = %d\n",        g_tOpts.iTestMode);
   printf("g_tOpts.iPrtOff     = %d\n",        g_tOpts.iPrtOff);
@@ -654,8 +655,8 @@ void debug(void) {
   printf("g_tOpts.csOptX.cStr = '%s'\n",      g_tOpts.csOptX.cStr);
   printf("g_tOpts.csRx.cStr   = '%s'\n",      g_tOpts.csRx.cStr);
   printf("g_tOpts.csRxF.cStr  = '%s'\n",      g_tOpts.csRxF.cStr);
-  printf("g_tOpts.iTicksMin   = %10d (%s)\n", g_tOpts.iTicksMin, csMin.cStr);
-  printf("g_tOpts.iTicksMax   = %10d (%s)\n", g_tOpts.iTicksMax, csMax.cStr);
+  printf("g_tOpts.tTicksMin   = %10d (%s)\n", g_tOpts.tTicksMin, csMin.cStr);
+  printf("g_tOpts.tTicksMax   = %10d (%s)\n", g_tOpts.tTicksMax, csMax.cStr);
 
   printf("Free argument's dynamic array: ");
   for (int i = 0; i < g_tArgs.sCount - 1; ++i)
