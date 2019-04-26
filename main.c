@@ -88,7 +88,7 @@ typedef long int      li;
 //const   int           true  = 1;
 
 // Arguments and options.
-typedef struct s_optopns {
+typedef struct s_options {
   long   lByteOff;
   int    iTestMode;
   int    iPrtOff;
