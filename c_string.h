@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.9.5
+ ** Version: v0.10.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -28,6 +28,11 @@
  **                   prior usage!
  ** 07.03.2019  JE    Now structs are all named.
  ** 23.04.2019  JE    Minor corrections and optimisations.
+ ** 14.05.2019  JE    Changed interface of csTrim().
+ ** 14.05.2019  JE    Fixed two offset-by-one bugs in csTrim().
+ ** 14.05.2019  JE    Added 'csTmp' in 'csTrim()', because 'pcString' could be
+ **                   a copy of 'pcsOut.cStr', and therefore been cleared
+ **                   prior usage!
  *******************************************************************************/
 
 
@@ -91,7 +96,7 @@ void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
 int         csInStr(const char *pcString, const char* pcFind);
 void        csMid(cstr* pcsDest, const char *pcSource, int iOffset, int iLength);
 int         csSplit(cstr* pcsLeft, cstr* pcsRight, const char *pcString, const char *pcSplitAt);
-cstr        csTrim(const char* pcString, int bWithNewLines);
+void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
 int         csInput(const char* pcMsg, cstr* pcsDest);
 cstr        ll2cstr(long long llValue);
 long long   cstr2ll(cstr csValue);
@@ -227,7 +232,7 @@ void csFree(cstr* pcsString) {
  * Name: csSet
  *******************************************************************************/
 void csSet(cstr* pcsString, const char* pcString) {
-  // Watch out, 'pcString' could be a copy of 'pcsString.cStr'!
+  // Watch out, 'pcString' could be a pointer from 'pcsString.cStr'!
   cstr csTmp = csNew(pcString);
   csFree(pcsString);
   *pcsString = csNew(csTmp.cStr);
@@ -291,7 +296,7 @@ int csInStr(const char* pcString, const char* pcFind) {
   if (csFind.len == 0)
     return -1;
 
-  // Search for
+  // Find last occurence of search-string.
   for (iSearch = 0; iSearch < csString.len; ++iSearch) {
     for (iFind = 0; iFind < csFind.len; ++iFind) {
       if (csString.cStr[iSearch + iFind] != csFind.cStr[iFind])
@@ -375,36 +380,40 @@ int csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcS
  * Name:  csTrim
  * Purpose: Strips leading and trailing whitespaces from string.
  *******************************************************************************/
-cstr csTrim(const char* pcString, int bWithNewLines) {
-  cstr csOut   = csNew("");
-  int  iOffMin = 0;
-  int  iOffMax = cstr_len(pcString);
-  int  iLen    = 0;
+void csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines) {
+  // Watch out, 'pcString' could be a pointer from 'pcsOut.cStr'!
+  cstr csTmp = csNew(pcString);
+  int iOffMin = 0;
+  int iOffMax = csTmp.len - 1;
+  int iLen    = 0;
 
   // Get offset of first non whitespace char from left.
-  while (cstr_check_if_whitespace(pcString[iOffMin], bWithNewLines))
+  while (cstr_check_if_whitespace(csTmp.cStr[iOffMin], bWithNewLines))
     ++iOffMin;
 
   // Get offset of first non whitespace char from right.
-  while (cstr_check_if_whitespace(pcString[iOffMax], bWithNewLines))
+  while (cstr_check_if_whitespace(csTmp.cStr[iOffMax], bWithNewLines))
     --iOffMax;
 
   // Length of trimmed string.
   iLen = iOffMax - iOffMin + 1;
 
+  // Initialize pcsOut.
+  csSet(pcsOut, "");
+
   // Check if length plus '0' byte fits into csOut.
-  cstr_double_capacity_if_full(&csOut, iLen + 1);
+  cstr_double_capacity_if_full(pcsOut, iLen + 1);
 
   // Copy
   for (int i = 0; i < iLen; ++i)
-    csOut.cStr[i] = pcString[iOffMin + i];
+    pcsOut->cStr[i] = csTmp.cStr[iOffMin + i];
 
   // Complete csOut's information and don't forget the '0' byte!
-  csOut.cStr[iLen + 1] = 0;
-  csOut.len            = iLen;
-  csOut.size           = iLen + 1;
+  pcsOut->cStr[iLen] = 0;
+  pcsOut->len        = iLen;
+  pcsOut->size       = iLen + 1;
 
-  return csOut;
+  csFree(&csTmp);
 }
 
 /*******************************************************************************
