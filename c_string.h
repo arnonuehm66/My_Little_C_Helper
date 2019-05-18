@@ -130,7 +130,7 @@ void cstr_check(cstr* pcString) {
     cstr_init(pcString);
     return;
   }
-  if (pcString->size      > pcString->capacity        ||
+  if (pcString->size    > pcString->capacity        ||
     pcString->capacity  < C_STRING_INITIAL_CAPACITY ||
     pcString->size     != pcString->len + 1         ||
     pcString->len      != cstr_len(pcString->cStr)) {
