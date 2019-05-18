@@ -5,4 +5,6 @@ Now introducing a test program with 'main.c', where all is explained on how to u
 
 Put everything in a directory and compile it with
 
-<code>gcc -Wall -o skleleton_main main.c </code>
+<code>gcc -Wall -lpcre2-8 main.c -o skeleton_main</code>
+
+You see, if you want to use 
