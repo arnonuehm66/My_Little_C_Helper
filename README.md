@@ -7,4 +7,10 @@ Put everything in a directory and compile it with
 
 <code>gcc -Wall -lpcre2-8 main.c -o skeleton_main</code>
 
-You see, if you want to use 'c_my_regex.h' you have to install 'libpcre2' on your system.
+If you want to use 'c_my_regex.h' you have to install 'libpcre2' on your system.
+
+Without 'c_my_regex.h'
+
+<code>gcc -Wall main.c -o my_prog_without_regex</code>
+
+will do the trick. ;o)
