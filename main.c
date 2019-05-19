@@ -16,7 +16,7 @@
  ** 10.10.2018  JE    Changed ticks2datetime() to avoid a cstr memory leak.
  ** 13.11.2018  JE    Added PCRE2 wrapper c_my_regex.h v0.1.1.
  ** 13.11.2018  JE    Added '--rx' to test regex with string provided by '-X'.
- ** 30.11.2018  JE    Now doRegex() uses flags directly and adjustet ouput.
+ ** 30.11.2018  JE    Now doRegex() uses flags directly and adjusted ouput.
  ** 01.11.2018  JE    Added '--rxF' to add flags to rx compilation.
  ** 24.12.2018  JE    Simplified version().
  ** 10.01.2019  JE    Added 'typedef long int li'.
