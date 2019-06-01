@@ -16,7 +16,7 @@
  ** 10.10.2018  JE    Changed ticks2datetime() to avoid a cstr memory leak.
  ** 13.11.2018  JE    Added PCRE2 wrapper c_my_regex.h v0.1.1.
  ** 13.11.2018  JE    Added '--rx' to test regex with string provided by '-X'.
- ** 30.11.2018  JE    Now doRegex() uses flags directly and adjusted ouput.
+ ** 30.11.2018  JE    Now doRegex() uses flags directly and adjustet ouput.
  ** 01.11.2018  JE    Added '--rxF' to add flags to rx compilation.
  ** 24.12.2018  JE    Simplified version().
  ** 10.01.2019  JE    Added 'typedef long int li'.
@@ -25,6 +25,7 @@
  ** 07.03.2019  JE    Now structs are all named.
  ** 23.04.2019  JE    Now use c_dynamic_arrays.h v0.3.3.
  ** 24.04.2019  JE    Changed int's to -time_t's ticks.
+ ** 31.05.2019  JE    Added openFile() and getFileSize() for convenience.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -54,7 +55,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.25"
+#define ME_VERSION "0.0.27"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -474,14 +475,14 @@ next_argument:
           shift(&csRv, &iArg, argc, argv);
           if (csRv.len == 0 || isNumber(csRv, &iSign) != NUM_INT)
             dispatchError(ERR_ARGS, "Min year is missing");
-          g_tOpts.tTicksMin = (int) cstr2ll(csRv);
+          g_tOpts.tTicksMin = (time_t) cstr2ll(csRv);
           continue;
         }
         if (cOpt == 'Y') {
           shift(&csRv, &iArg, argc, argv);
           if (csRv.len == 0 || isNumber(csRv, &iSign) != NUM_INT)
             dispatchError(ERR_ARGS, "Max year is missing");
-          g_tOpts.tTicksMax = (int) cstr2ll(csRv);
+          g_tOpts.tTicksMax = (time_t) cstr2ll(csRv);
           continue;
         }
         dispatchError(ERR_ARGS, "Invalid short option");
@@ -533,6 +534,35 @@ next_argument:
   csFree(&csOpt);
 
   return;
+}
+
+/*******************************************************************************
+ * Name:  openFile
+ * Purpose: Opens a file or throws an error.
+ *******************************************************************************/
+FILE* openFile(const char* pcName, const char* pcFlags) {
+  FILE* hFile;
+
+  if (!(hFile = fopen(pcName, pcFlags))) {
+    cstr csMsg = csNew("");
+    csSetf(&csMsg, "Can't open '%s'", pcName);
+    dispatchError(ERR_FILE, csMsg.cStr);
+  }
+  return hFile;
+}
+
+/*******************************************************************************
+ * Name:  getFileSize
+ * Purpose: Returns size of file in bytes.
+ *******************************************************************************/
+ll getFileSize(FILE* hFile) {
+  ll llSize = 0;
+
+  fseek(hFile, 0, SEEK_END);
+  llSize = (ll) ftell(hFile);
+  fseek(hFile, 0, SEEK_SET);
+
+  return llSize;
 }
 
 /*******************************************************************************
@@ -649,14 +679,14 @@ void debug(void) {
   ticks2datetime(&csMin, " (UTC)", g_tOpts.tTicksMin);
   ticks2datetime(&csMax, " (UTC)", g_tOpts.tTicksMax);
 
-  printf("g_tOpts.iTestMode   = %d\n",        g_tOpts.iTestMode);
-  printf("g_tOpts.iPrtOff     = %d\n",        g_tOpts.iPrtOff);
-  printf("g_tOpts.iOptX       = %d\n",        g_tOpts.iOptX);
-  printf("g_tOpts.csOptX.cStr = '%s'\n",      g_tOpts.csOptX.cStr);
-  printf("g_tOpts.csRx.cStr   = '%s'\n",      g_tOpts.csRx.cStr);
-  printf("g_tOpts.csRxF.cStr  = '%s'\n",      g_tOpts.csRxF.cStr);
-  printf("g_tOpts.tTicksMin   = %10d (%s)\n", g_tOpts.tTicksMin, csMin.cStr);
-  printf("g_tOpts.tTicksMax   = %10d (%s)\n", g_tOpts.tTicksMax, csMax.cStr);
+  printf("g_tOpts.iTestMode   = %d\n",         g_tOpts.iTestMode);
+  printf("g_tOpts.iPrtOff     = %d\n",         g_tOpts.iPrtOff);
+  printf("g_tOpts.iOptX       = %d\n",         g_tOpts.iOptX);
+  printf("g_tOpts.csOptX.cStr = '%s'\n",       g_tOpts.csOptX.cStr);
+  printf("g_tOpts.csRx.cStr   = '%s'\n",       g_tOpts.csRx.cStr);
+  printf("g_tOpts.csRxF.cStr  = '%s'\n",       g_tOpts.csRxF.cStr);
+  printf("g_tOpts.tTicksMin   = %10li (%s)\n", g_tOpts.tTicksMin, csMin.cStr);
+  printf("g_tOpts.tTicksMax   = %10li (%s)\n", g_tOpts.tTicksMax, csMax.cStr);
 
   printf("Free argument's dynamic array: ");
   for (int i = 0; i < g_tArgs.sCount - 1; ++i)
@@ -698,11 +728,7 @@ int main(int argc, char *argv[]) {
 
   // Get all data from all files.
   for (int i = 0; i < g_tArgs.sCount; ++i) {
-    if (!(hFile = fopen(g_tArgs.pStr[i].cStr, "rb"))) {
-      cstr csMsg = csNew("");
-      csSetf(&csMsg, "Can't open '%s'", g_tArgs.pStr[i].cStr);
-      dispatchError(ERR_FILE, csMsg.cStr);
-    }
+    hFile = openFile(g_tArgs.pStr[i].cStr, "rb");
 //-- file ----------------------------------------------------------------------
     while (!feof(hFile)) {
       getData(hFile);
