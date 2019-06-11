@@ -33,7 +33,7 @@
  ** 14.05.2019  JE    Added 'csTmp' in 'csTrim()', because 'pcString' could be
  **                   a copy of 'pcsOut.cStr', and therefore been cleared
  **                   prior usage!
- ** 06.06.2019  JE    Added lenUtf8 in struct, cstr_utf8_cont(),
+ ** 06.06.2019  JE    Added lenUtf8 in struct, cstr_utf8_conts(),
  **                   cstr_utf8_bytes() and cstr_lenUtf8().
  ** 06.06.2019  JE    Added csIsUtf8(), csAt() and csAtUtf8().
  *******************************************************************************/
@@ -84,7 +84,7 @@ void   cstr_init(cstr* pcString);
 void   cstr_check(cstr* pcString);
 void   cstr_double_capacity_if_full(cstr* pcString, size_t tSize);
 int    cstr_utf8_cont(const char c);
-int    cstr_utf8_bytes(const char *c);
+size_t cstr_utf8_bytes(const char *c);
 size_t cstr_lenUtf8(const char* pcString, size_t *pLen);
 size_t cstr_len(const char* pcString);
 int    cstr_check_if_whitespace(const char cChar, int bWithNewLines);
@@ -173,7 +173,7 @@ int cstr_utf8_cont(const char c) {
 /*******************************************************************************
  * Name: cstr_utf8_bytes
  *******************************************************************************/
-int cstr_utf8_bytes(const char* c) {
+size_t cstr_utf8_bytes(const char* c) {
   if ((c[0] & 0x80) == 0x00) return 1;
 
   if ((c[0] & 0xe0) == 0xc0 &&
@@ -243,11 +243,12 @@ int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
  *******************************************************************************/
 cstr csNew(const char* pcString) {
   cstr   csOut  = {0};
+  size_t tClen  = 0;
+  size_t tUlen  = cstr_lenUtf8(pcString, &tClen);
   size_t tCsize = 0;
-  size_t tUsize = cstr_lenUtf8(pcString, &tCsize);
 
   // Includes '\0'.
-  ++tCsize;
+  tCsize = tClen + 1;
 
   cstr_init(&csOut);
   cstr_double_capacity_if_full(&csOut, tCsize);
@@ -257,8 +258,8 @@ cstr csNew(const char* pcString) {
     csOut.cStr[i] = pcString[i];
 
   // Adjust parameter.
-  csOut.len     = tCsize - 1;
-  csOut.lenUtf8 = tUsize;
+  csOut.len     = tClen;
+  csOut.lenUtf8 = tUlen;
   csOut.size    = tCsize;
 
   // Do not csFree(&csOut);!
@@ -563,7 +564,12 @@ size_t csAtUtf8(char* pcStr, const char* pcString, size_t tPos) {
 
   // Get offset of UTF-8 position.
   while (posUtf8 < tPos) {
-    pos     += cstr_utf8_bytes(&pcString[pos]);
+    // Stop at any malformed UTF-8 char.
+    if ((tBytes = cstr_utf8_bytes(&pcString[pos])) == 0) {
+      pcStr[0] = 0;
+      return 0;
+    }
+    pos     += tBytes;
     posUtf8 += 1;
   }
 
