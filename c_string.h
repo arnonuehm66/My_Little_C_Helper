@@ -33,7 +33,7 @@
  ** 14.05.2019  JE    Added 'csTmp' in 'csTrim()', because 'pcString' could be
  **                   a copy of 'pcsOut.cStr', and therefore been cleared
  **                   prior usage!
- ** 06.06.2019  JE    Added lenUtf8 in struct, cstr_utf8_conts(),
+ ** 06.06.2019  JE    Added lenUtf8 in struct, cstr_utf8_cont(),
  **                   cstr_utf8_bytes() and cstr_lenUtf8().
  ** 06.06.2019  JE    Added csIsUtf8(), csAt() and csAtUtf8().
  *******************************************************************************/
