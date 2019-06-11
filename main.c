@@ -26,6 +26,8 @@
  ** 23.04.2019  JE    Now use c_dynamic_arrays.h v0.3.3.
  ** 24.04.2019  JE    Changed int's to -time_t's ticks.
  ** 31.05.2019  JE    Added openFile() and getFileSize() for convenience.
+ ** 11.06.2019  JE    Now use c_string.h v0.11.1 with UTF-8 support.
+ ** 11.06.2019  JE    Extended debug() and added printCsInternals().
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -55,7 +57,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.27"
+#define ME_VERSION "0.0.28"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -668,6 +670,29 @@ free_and_exit:
 }
 
 /*******************************************************************************
+ * Name:  printCsInternals
+ *******************************************************************************/
+void printCsInternals(cstr* pcsStr) {
+  char   cStr[5] = {0};
+  size_t tSize   = 0;
+
+  printf("cstr->len      = %li\n", pcsStr->len);
+  printf("cstr->lenUtf8  = %li\n", pcsStr->lenUtf8);
+  printf("cstr->size     = %li\n", pcsStr->size);
+  printf("cstr->capacity = %li\n", pcsStr->capacity);
+  printf("cstr->cstr     = %s",    pcsStr->cStr);
+  if (csIsUtf8(pcsStr->cStr)) printf(" (UTF-8)\n"); else printf(" (ASCII)\n");
+  printf("--------------------------------------------------------------------------------\n");
+  for(size_t i = 0; i < pcsStr->lenUtf8; ++i) {
+    cStr[0] = cStr[1] = cStr[2] = cStr[3] = cStr[4] = 0;
+    tSize = csAtUtf8(cStr, pcsStr->cStr, i);
+    printf("cstr @ [%02i] = '%s'", i, cStr);
+    if (tSize == 1) printf(" (1 byte)\n"); else printf(" (%li bytes)\n", tSize);
+  }
+  printf("--------------------------------------------------------------------------------\n");
+}
+
+/*******************************************************************************
  * Name:  debug
  *******************************************************************************/
 void debug(void) {
@@ -675,6 +700,17 @@ void debug(void) {
   cstr csMax   = csNew("");
   cstr csSubRx = csNew("");
   cstr csRx    = csNew("");
+  cstr csTest  = csNew("abcd");
+
+  printCsInternals(&csTest);
+
+  csTest = csNew("aßcöäüd");
+  printCsInternals(&csTest);
+
+  csTest = csNew("ñáè");
+  printCsInternals(&csTest);
+
+  printf("\n");
 
   ticks2datetime(&csMin, " (UTC)", g_tOpts.tTicksMin);
   ticks2datetime(&csMax, " (UTC)", g_tOpts.tTicksMax);
@@ -705,6 +741,7 @@ void debug(void) {
   csFree(&csMax);
   csFree(&csSubRx);
   csFree(&csRx);
+  csFree(&csTest);
 
   exit(0);
 }
