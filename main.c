@@ -673,7 +673,7 @@ free_and_exit:
  * Name:  printCsInternals
  *******************************************************************************/
 void printCsInternals(cstr* pcsStr) {
-  char   cStr[5] = {0};
+  char   cStr[5] = {0}; // To host a max UTF-8 char-string.
   size_t tSize   = 0;
 
   printf("cstr->len      = %li\n", pcsStr->len);
@@ -684,7 +684,6 @@ void printCsInternals(cstr* pcsStr) {
   if (csIsUtf8(pcsStr->cStr)) printf(" (UTF-8)\n"); else printf(" (ASCII)\n");
   printf("--------------------------------------------------------------------------------\n");
   for(size_t i = 0; i < pcsStr->lenUtf8; ++i) {
-    cStr[0] = cStr[1] = cStr[2] = cStr[3] = cStr[4] = 0;
     tSize = csAtUtf8(cStr, pcsStr->cStr, i);
     printf("cstr @ [%02i] = '%s'", i, cStr);
     if (tSize == 1) printf(" (1 byte)\n"); else printf(" (%li bytes)\n", tSize);

@@ -548,6 +548,9 @@ size_t csAtUtf8(char* pcStr, const char* pcString, size_t tPos) {
   size_t posUtf8 = cstr_lenUtf8(pcString, &pos);
   size_t tBytes  = 0;
 
+  // Must be a 5 byte char array for a 4 byte UTF-8 char at max. Clear it.
+  pcStr[0] = pcStr[1] = pcStr[2] = pcStr[3] = pcStr[4] = 0;
+
   // Calc count of UTF-8 chars for boundary check.
   if (tPos > posUtf8 || tPos < 0) {
     pcStr[0] = 0;
