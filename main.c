@@ -685,7 +685,7 @@ void printCsInternals(cstr* pcsStr) {
   printf("--------------------------------------------------------------------------------\n");
   for(size_t i = 0; i < pcsStr->lenUtf8; ++i) {
     tSize = csAtUtf8(cStr, pcsStr->cStr, i);
-    printf("cstr @ [%02i] = '%s'", i, cStr);
+    printf("cstr @ [%02lu] = '%s'", i, cStr);
     if (tSize == 1) printf(" (1 byte)\n"); else printf(" (%li bytes)\n", tSize);
   }
   printf("--------------------------------------------------------------------------------\n");
