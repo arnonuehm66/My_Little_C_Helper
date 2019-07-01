@@ -2,13 +2,14 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.1.3
+ ** Version: v0.2.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
  ** 19.09.2018  JE    Created version 0.0.1
  ** 30.11.2018  JE    Changed processing of flag 'x'.
  ** 07.03.2019  JE    Now structs are all named.
+ ** 01.07.2019  JE    Now create and free matching array internally.
  *******************************************************************************/
 
 
@@ -56,6 +57,7 @@ typedef struct s_rx_matcher {
   PCRE2_SPTR        pcSubject;
   size_t            sSubjectLength;
   uint32_t          ui32Opts;
+  t_array_cstr      dacsMatches;
 } t_rx_matcher;
 
 
@@ -69,7 +71,7 @@ typedef struct s_rx_matcher {
 
 int  rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchStr, const char* pcRegex, const char* pcFlags, cstr *pcsErr);
 void rxDelMatcher(t_rx_matcher* prxMatcher);
-int  rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr, cstr *pcsErr);
+int  rxMatch(t_rx_matcher* prxMatcher, int *piErr, cstr *pcsErr);
 
 
 //******************************************************************************
@@ -91,6 +93,9 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchS
   prxMatcher->pcSubject      = NULL;
   prxMatcher->sSubjectLength = 0;
   prxMatcher->ui32Opts       = 0;
+
+  // Init cstr array, which holds all matches.
+  dacsInit(&prxMatcher->dacsMatches);
 
   // Convert option string into options and init everything to work global.
   // Because PCRE2_EXTENDED don't work, I use the implicit form '(?x:...)'.
@@ -135,12 +140,13 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchS
 void rxDelMatcher(t_rx_matcher* prxMatcher) {
   pcre2_match_data_free(prxMatcher->pMatchData);
   pcre2_code_free(prxMatcher->pRegex);
+  dacsFree(&prxMatcher->dacsMatches);
 }
 
 /*******************************************************************************
  * Name: rxMatch
  *******************************************************************************/
-int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr, cstr *pcsErr) {
+int rxMatch(t_rx_matcher* prxMatcher, int* piErr, cstr* pcsErr) {
   PCRE2_SPTR  pcSubStr    = NULL;
   cstr        csSubStr    = csNew("");
   size_t      sSubStrLen  = 0;
@@ -199,7 +205,8 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
   //****************************************************************************
 
   piOvector = pcre2_get_ovector_pointer(prxMatcher->pMatchData);
-  dacsClear(pdacsSubMatches);
+  dacsClear(&prxMatcher->dacsMatches);
+
   for (int i = 0; i < iMatchCount; ++i) {
     iStart = 2 * i;       // Next even index.
     iEnd   = 2 * i + 1;   // Next odd index.
@@ -210,7 +217,7 @@ int rxMatch(t_array_cstr* pdacsSubMatches, t_rx_matcher* prxMatcher, int *piErr,
 
     // ... and add it to the dynamic array via temporary cstr.
     csSetf(&csSubStr, "%.*s", sSubStrLen, pcSubStr);
-    dacsAdd(pdacsSubMatches, csSubStr.cStr);
+    dacsAdd(&prxMatcher->dacsMatches, csSubStr.cStr);
   }
 
   // Store end of complete match as pos().

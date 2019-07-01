@@ -28,6 +28,7 @@
  ** 31.05.2019  JE    Added openFile() and getFileSize() for convenience.
  ** 11.06.2019  JE    Now use c_string.h v0.11.1 with UTF-8 support.
  ** 11.06.2019  JE    Extended debug() and added printCsInternals().
+ ** 11.06.2019  JE    Now use c_my_regex.h v0.2.1.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -57,7 +58,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.28"
+#define ME_VERSION "0.0.29"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -633,17 +634,12 @@ void printEntry(int iOffset) {
  *******************************************************************************/
 void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   t_rx_matcher rxMatcher = {0};
-  t_array_cstr dacsMatch = {0};
   cstr         csErr     = csNew("");
   int          iErr      = 0;
-  int          fFoundIt  = 0;
 
   printf("\nMatch: '%s'\n", pcToSearch);
   printf("With:  '%s'\n",   pcRegex);
   printf("Flags: '%s'\n",   pcFlags);
-
-  // Init cstr array, which holds all matches.
-  dacsInit(&dacsMatch);
 
   // Compile regex and init global matcher struct.
   if (rxInitMatcher(&rxMatcher, 0, pcToSearch, pcRegex, pcFlags, &csErr) != RX_NO_ERROR) {
@@ -651,22 +647,17 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
     goto free_and_exit;
   }
 
-  // rxMatch() crams all sub-matches into cstr array and signals, if matching
-  // reached end of string.
-  while (rxMatch(&dacsMatch, &rxMatcher, &iErr, &csErr)) {
-    fFoundIt = 1;
-    for (int i = 0; i < dacsMatch.sCount; ++i)
-      printf("$%d = '%s'\n", i, dacsMatch.pStr[i].cStr);
-    printf("----\n");
+  // rxMatch() crams all sub-matches into an intenal cstr array and signals, if
+  // matching reached end of string.
+  while (rxMatch(&rxMatcher, &iErr, &csErr)) {
+    for (int i = 0; i < rxMatcher.dacsMatches.sCount; ++i)
+      printf("$%d = '%s'\n", i, rxMatcher.dacsMatches.pStr[i].cStr);
   }
-
-  // Print the separator, even when no match occurred.
-  if (!fFoundIt) printf("----\n");
+  printf("----\n");
 
   // Free memory of all used structs.
 free_and_exit:
   rxDelMatcher(&rxMatcher);
-  dacsFree(&dacsMatch);
 }
 
 /*******************************************************************************
