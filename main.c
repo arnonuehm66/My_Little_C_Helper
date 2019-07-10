@@ -29,6 +29,8 @@
  ** 11.06.2019  JE    Now use c_string.h v0.11.1 with UTF-8 support.
  ** 11.06.2019  JE    Extended debug() and added printCsInternals().
  ** 11.06.2019  JE    Now use c_my_regex.h v0.2.1.
+ ** 04.07.2019  JE    Extended doRegex() to add pos after match in output.
+ ** 10.07.2019  JE    Added toInt() working with endian.h.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -45,6 +47,7 @@
 #include <time.h>
 #include <math.h>
 #include <sys/stat.h>
+#include <endian.h>       // To get __LITTLE_ENDIAN
 
 //#include "../../libs/c_string.h"
 //#include "../../libs/c_my_regex.h"
@@ -58,7 +61,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.29"
+#define ME_VERSION "0.0.31"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -103,6 +106,12 @@ typedef struct s_options {
   time_t tTicksMin;
   time_t tTicksMax;
 } t_options;
+
+// toInt() bytes to int converter.
+typedef union u_char2Int{
+  char ac4Bytes[4];
+  int  iInt;
+} t_char2Int;
 
 
 //******************************************************************************
@@ -569,6 +578,21 @@ ll getFileSize(FILE* hFile) {
 }
 
 /*******************************************************************************
+ * Name:  toInt
+ * Purpose: Converts up to 4 bytes to integer.
+ *******************************************************************************/
+int toInt(char* pc4Bytes, int iCount) {
+  t_char2Int tInt = {0};
+    for (int i = 0; i < iCount; ++i)
+#     if __BYTE_ORDER == __LITTLE_ENDIAN
+        tInt.ac4Bytes[i] = pc4Bytes[i];
+#     else
+        tInt.ac4Bytes[i] = pc4Bytes[iCount - i - 1];
+#     endif
+  return tInt.iInt;
+}
+
+/*******************************************************************************
  * Name:  round
  * Purpose: Returns float, rounded to given count of digits.
  *******************************************************************************/
@@ -649,9 +673,11 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
 
   // rxMatch() crams all sub-matches into an intenal cstr array and signals, if
   // matching reached end of string.
+  printf("Start offset = %i\n", rxMatcher.iPos);
   while (rxMatch(&rxMatcher, &iErr, &csErr)) {
     for (int i = 0; i < rxMatcher.dacsMatches.sCount; ++i)
       printf("$%d = '%s'\n", i, rxMatcher.dacsMatches.pStr[i].cStr);
+    printf("Next offset = %i\n", rxMatcher.iPos);
   }
   printf("----\n");
 
