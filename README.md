@@ -5,7 +5,7 @@ Now introducing a test program with 'main.c', where all is explained on how to u
 
 Put everything in a directory and compile it with
 
-<code>gcc -Wall -lpcre2-8 main.c -o skeleton_main</code>
+<code>gcc -Wall -lpcre2-8 main.c -o skeleton_main_c</code>
 
 If you want to use 'c_my_regex.h' you have to install 'libpcre2' on your system.
 
