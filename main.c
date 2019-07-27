@@ -31,6 +31,7 @@
  ** 11.06.2019  JE    Now use c_my_regex.h v0.2.1.
  ** 04.07.2019  JE    Extended doRegex() to add pos after match in output.
  ** 10.07.2019  JE    Added toInt() working with endian.h.
+ ** 20.07.2019  JE    Changed DST to 0 in datetime2ticks() to fix 1h diff bug.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -61,7 +62,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.31"
+#define ME_VERSION "0.0.32"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -305,7 +306,8 @@ time_t datetime2ticks(int fUseString, const char* pcTime,
   sTime.tm_min  = iMin;     // Minutes. [0-59]
   sTime.tm_sec  = iSec;     // Seconds. [0-60] (1 leap second)
 
-  sTime.tm_isdst = -1;
+  // Must be zero when UTC.
+  sTime.tm_isdst = 0;
 
   csFree(&csItem);
 
