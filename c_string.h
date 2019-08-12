@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.11.2
+ ** Version: v0.11.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -37,6 +37,7 @@
  **                   cstr_utf8_bytes() and cstr_lenUtf8().
  ** 06.06.2019  JE    Added csIsUtf8(), csAt() and csAtUtf8().
  ** 11.06.2019  JE    Changed all positions and length ints into size_t.
+ ** 07.08.2019  JE    Changed all pos and off from size_t to long long in csMid.
  *******************************************************************************/
 
 
@@ -102,7 +103,7 @@ void        csSet(cstr* pcsString, const char* pcString);
 void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
 size_t      csInStr(const char *pcString, const char* pcFind);
-void        csMid(cstr* pcsDest, const char *pcSource, size_t tOffset, size_t tLength);
+void        csMid(cstr* pcsDest, const char *pcSource, long long llOffset, long long llLength);
 size_t      csSplit(cstr* pcsLeft, cstr* pcsRight, const char *pcString, const char *pcSplitAt);
 void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
 int         csInput(const char* pcMsg, cstr* pcsDest);
@@ -383,7 +384,7 @@ size_t csInStr(const char* pcString, const char* pcFind) {
  * Name: csMid
  * Purpose: .
  *******************************************************************************/
-void csMid(cstr* pcsDest, const char* pcSource, size_t tOffset, size_t tLength) {
+void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long llLength) {
   cstr csSource = csNew(pcSource);
 
   // Negative offset stands for offset from the right side.
@@ -398,28 +399,28 @@ void csMid(cstr* pcsDest, const char* pcSource, size_t tOffset, size_t tLength) 
   csSet(pcsDest, "");
 
   // Set negative offset to corresponding positive.
-  if (tOffset < 0)
-    tOffset = csSource.len + tOffset;
+  if (llOffset < 0)
+    llOffset = csSource.len + llOffset;
 
   // Return empty string object if offset doesn't fit (negativ or positive).
   // Or wanted length is 0.
-  if (tOffset > csSource.len || tLength == 0)
+  if (llOffset > csSource.len || llLength == 0)
     return;
 
   // Adjust length to max if it exceeds string's length or is negative.
-  if (tLength > csSource.len - tOffset || tLength < 0)
-    tLength = csSource.len - tOffset;
+  if (llLength > csSource.len - llOffset || llLength < 0)
+    llLength = csSource.len - llOffset;
 
-  cstr_double_capacity_if_full(pcsDest, tLength + 1);
+  cstr_double_capacity_if_full(pcsDest, llLength + 1);
 
   // Copy length chars from offset.
-  for (size_t i = 0; i < tLength; ++i)
-    pcsDest->cStr[i] = csSource.cStr[tOffset + i];
+  for (size_t i = 0; i < llLength; ++i)
+    pcsDest->cStr[i] = csSource.cStr[llOffset + i];
 
   // Mind the '\0'!
-  pcsDest->cStr[tLength] = '\0';
-  pcsDest->len           = tLength;
-  pcsDest->size          = tLength + 1;
+  pcsDest->cStr[llLength] = '\0';
+  pcsDest->len            = llLength;
+  pcsDest->size           = llLength + 1;
 
   csClear(&csSource);
 }

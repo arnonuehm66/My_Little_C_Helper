@@ -31,7 +31,8 @@
  ** 11.06.2019  JE    Now use c_my_regex.h v0.2.1.
  ** 04.07.2019  JE    Extended doRegex() to add pos after match in output.
  ** 10.07.2019  JE    Added toInt() working with endian.h.
- ** 20.07.2019  JE    Changed DST to 0 in datetime2ticks() to fix 1h diff bug.
+ ** 17.07.2019  JE    Now tm_isdst is set permanentely to 0 in datetime2ticks().
+ ** 17.07.2019  JE    Added '-d' for string -> ticks -> string conversion test.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -62,7 +63,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.32"
+#define ME_VERSION "0.0.33"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -106,6 +107,8 @@ typedef struct s_options {
   cstr   csRxF;
   time_t tTicksMin;
   time_t tTicksMax;
+  cstr   csDateTime;
+  time_t tDateTime;
 } t_options;
 
 // toInt() bytes to int converter.
@@ -163,6 +166,8 @@ void usage(int iErr, const char* pcMsg) {
   "  ox=hex:        this is an hex/dec option eating a hex/dec string\n"
   "  -y yyyy:       min year to consider a track as valid (default 2002)\n"
   "  -Y yyyy:       max year to consider a track as valid (default to 'now')\n"
+  "  -d 'yyyy/mm/dd, hh:mm:ss':"
+  "                 convert string to ticks and back to string for testing\n"
   "  -h|--help:     print this help\n"
   "  -v|--version:  print version of program\n"
 //|************************ 80 chars width ****************************************|
@@ -306,7 +311,7 @@ time_t datetime2ticks(int fUseString, const char* pcTime,
   sTime.tm_min  = iMin;     // Minutes. [0-59]
   sTime.tm_sec  = iSec;     // Seconds. [0-60] (1 leap second)
 
-  // Must be zero when UTC.
+  // UTC should have no daylight saving time!
   sTime.tm_isdst = 0;
 
   csFree(&csItem);
@@ -389,15 +394,17 @@ void getOptions(int argc, char* argv[]) {
   int  iSign  = 0;
 
   // Set defaults.
-  g_tOpts.iTestMode   = 0;
-  g_tOpts.lByteOff    = 0;
-  g_tOpts.iPrtOff     = 0;
-  g_tOpts.iOptX       = 0;
-  g_tOpts.csOptX      = csNew("0f:aa:08:7e:50");
-  g_tOpts.csRx        = csNew("([0-9a-fA-F]{2})(:?)");
-  g_tOpts.csRxF       = csNew("");
-  g_tOpts.tTicksMin   = 2002;   // This will be converted into unix ticks.
-  g_tOpts.tTicksMax   = NO_TICK;
+  g_tOpts.iTestMode  = 0;
+  g_tOpts.lByteOff   = 0;
+  g_tOpts.iPrtOff    = 0;
+  g_tOpts.iOptX      = 0;
+  g_tOpts.csOptX     = csNew("0f:aa:08:7e:50");
+  g_tOpts.csRx       = csNew("([0-9a-fA-F]{2})(:?)");
+  g_tOpts.csRxF      = csNew("");
+  g_tOpts.tTicksMin  = 2002;   // This will be converted into unix ticks.
+  g_tOpts.tTicksMax  = NO_TICK;
+  g_tOpts.csDateTime = csNew("");
+  g_tOpts.tDateTime  = NO_TICK;
 
   // Init free argument's dynamic array.
   dacsInit(&g_tArgs);
@@ -499,6 +506,13 @@ next_argument:
           g_tOpts.tTicksMax = (time_t) cstr2ll(csRv);
           continue;
         }
+        if (cOpt == 'd') {
+          shift(&csRv, &iArg, argc, argv);
+          if (csRv.len == 0)
+            dispatchError(ERR_ARGS, "Date time missing");
+          csSet(&g_tOpts.csDateTime, csRv.cStr);
+          continue;
+        }
         dispatchError(ERR_ARGS, "Invalid short option");
       }
       goto next_argument;
@@ -569,14 +583,14 @@ FILE* openFile(const char* pcName, const char* pcFlags) {
  * Name:  getFileSize
  * Purpose: Returns size of file in bytes.
  *******************************************************************************/
-ll getFileSize(FILE* hFile) {
-  ll llSize = 0;
+li getFileSize(FILE* hFile) {
+  li liSize = 0;
 
   fseek(hFile, 0, SEEK_END);
-  llSize = (ll) ftell(hFile);
+  liSize = (li) ftell(hFile);
   fseek(hFile, 0, SEEK_SET);
 
-  return llSize;
+  return liSize;
 }
 
 /*******************************************************************************
@@ -714,11 +728,13 @@ void printCsInternals(cstr* pcsStr) {
  * Name:  debug
  *******************************************************************************/
 void debug(void) {
-  cstr csMin   = csNew("");
-  cstr csMax   = csNew("");
-  cstr csSubRx = csNew("");
-  cstr csRx    = csNew("");
-  cstr csTest  = csNew("abcd");
+  cstr csMin      = csNew("");
+  cstr csMax      = csNew("");
+  cstr csSubRx    = csNew("");
+  cstr csRx       = csNew("");
+  cstr csTest     = csNew("abcd");
+  cstr csDateTime = csNew("");
+
 
   printCsInternals(&csTest);
 
@@ -733,6 +749,17 @@ void debug(void) {
   ticks2datetime(&csMin, " (UTC)", g_tOpts.tTicksMin);
   ticks2datetime(&csMax, " (UTC)", g_tOpts.tTicksMax);
 
+  // Convert string to ticks and back for testing of both utc time functions.
+  g_tOpts.tDateTime = datetime2ticks(1, g_tOpts.csDateTime.cStr, 0, 0, 0, 0, 0, 0);
+  ticks2datetime(&csDateTime, " (UTC)", g_tOpts.tDateTime);
+
+  printf("--- String -> Ticks -> String ---\n");
+  printf("g_tOpts.csDateTime  = '%s'\n",       g_tOpts.csDateTime.cStr);
+  printf("g_tOpts.tDateTime   = %10li\n",      g_tOpts.tDateTime);
+  printf("csDateTime          = '%s'\n",       csDateTime.cStr);
+  printf("--- String -> Ticks -> String ---\n");
+  printf("\n");
+
   printf("g_tOpts.iTestMode   = %d\n",         g_tOpts.iTestMode);
   printf("g_tOpts.iPrtOff     = %d\n",         g_tOpts.iPrtOff);
   printf("g_tOpts.iOptX       = %d\n",         g_tOpts.iOptX);
@@ -741,6 +768,7 @@ void debug(void) {
   printf("g_tOpts.csRxF.cStr  = '%s'\n",       g_tOpts.csRxF.cStr);
   printf("g_tOpts.tTicksMin   = %10li (%s)\n", g_tOpts.tTicksMin, csMin.cStr);
   printf("g_tOpts.tTicksMax   = %10li (%s)\n", g_tOpts.tTicksMax, csMax.cStr);
+  printf("\n");
 
   printf("Free argument's dynamic array: ");
   for (int i = 0; i < g_tArgs.sCount - 1; ++i)
@@ -760,6 +788,7 @@ void debug(void) {
   csFree(&csSubRx);
   csFree(&csRx);
   csFree(&csTest);
+  csFree(&csDateTime);
 
   exit(0);
 }

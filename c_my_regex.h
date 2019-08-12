@@ -70,8 +70,8 @@ typedef struct s_rx_matcher {
 //* public functions
 
 int  rxInitMatcher(t_rx_matcher* prxMatcher, int iStartPos, const char* pcSearchStr, const char* pcRegex, const char* pcFlags, cstr *pcsErr);
-void rxDelMatcher(t_rx_matcher* prxMatcher);
-int  rxMatch(t_rx_matcher* prxMatcher, int *piErr, cstr *pcsErr);
+void  rxDelMatcher(t_rx_matcher* prxMatcher);
+int        rxMatch(t_rx_matcher* prxMatcher, int *piErr, cstr *pcsErr);
 
 
 //******************************************************************************
