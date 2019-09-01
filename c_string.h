@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.11.3
+ ** Version: v0.11.4
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -36,8 +36,9 @@
  ** 06.06.2019  JE    Added lenUtf8 in struct, cstr_utf8_conts(),
  **                   cstr_utf8_bytes() and cstr_lenUtf8().
  ** 06.06.2019  JE    Added csIsUtf8(), csAt() and csAtUtf8().
- ** 11.06.2019  JE    Changed all positions and length ints into size_t.
+ ** 11.06.2019  JE    Changed all positions and length ints into long long.
  ** 07.08.2019  JE    Changed all pos and off from size_t to long long in csMid.
+ ** 30.08.2019  JE    Changed all size_t to long long due to unsigned int bugs.
  *******************************************************************************/
 
 
@@ -69,11 +70,11 @@
 
 // Central struct, which defines a cstr 'object'.
 typedef struct s_cstr {
-  size_t len;      // number of characters in cstr
-  size_t lenUtf8;  // number of UTF-8 characters in cstr
-  size_t size;     // size of array
-  size_t capacity; // total available slots
-  char*  cStr;     // array of chars we're storing
+  long long len;      // number of characters in cstr
+  long long lenUtf8;  // number of UTF-8 characters in cstr
+  long long size;     // size of array
+  long long capacity; // total available slots
+  char*     cStr;     // array of chars we're storing
 } cstr;
 
 
@@ -82,14 +83,14 @@ typedef struct s_cstr {
 //* Makes for a better function's arrangement.
 
 // Internal functions.
-void   cstr_init(cstr* pcString);
-void   cstr_check(cstr* pcString);
-void   cstr_double_capacity_if_full(cstr* pcString, size_t tSize);
-int    cstr_utf8_cont(const char c);
-size_t cstr_utf8_bytes(const char *c);
-size_t cstr_lenUtf8(const char* pcString, size_t *pLen);
-size_t cstr_len(const char* pcString);
-int    cstr_check_if_whitespace(const char cChar, int bWithNewLines);
+void      cstr_init(cstr* pcString);
+void      cstr_check(cstr* pcString);
+void      cstr_double_capacity_if_full(cstr* pcString, long long llSize);
+int       cstr_utf8_cont(const char c);
+long long cstr_utf8_bytes(const char *c);
+long long cstr_lenUtf8(const char* pcString, long long *pLen);
+long long cstr_len(const char* pcString);
+int       cstr_check_if_whitespace(const char cChar, int bWithNewLines);
 
 // External functions.
 
@@ -102,14 +103,14 @@ void csFree(cstr* pcsString);
 void        csSet(cstr* pcsString, const char* pcString);
 void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
-size_t      csInStr(const char *pcString, const char* pcFind);
+long long   csInStr(const char *pcString, const char* pcFind);
 void        csMid(cstr* pcsDest, const char *pcSource, long long llOffset, long long llLength);
-size_t      csSplit(cstr* pcsLeft, cstr* pcsRight, const char *pcString, const char *pcSplitAt);
+long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char *pcString, const char *pcSplitAt);
 void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
 int         csInput(const char* pcMsg, cstr* pcsDest);
 int         csIsUtf8(const char* pcString);
-int         csAt(char* pcChar, const char* pcString, size_t tPos);
-size_t      csAtUtf8(char* pcChar, const char* pcString, size_t tPos);
+int         csAt(char* pcChar, const char* pcString, long long llPos);
+long long   csAtUtf8(char* pcChar, const char* pcString, long long llPos);
 cstr        ll2cstr(long long llValue);
 long long   cstr2ll(cstr csValue);
 cstr        ld2cstr(long double ldValue);
@@ -154,12 +155,12 @@ void cstr_check(cstr* pcString) {
 /*******************************************************************************
  * Name: cstr_double_capacity_if_full
  *******************************************************************************/
-void cstr_double_capacity_if_full(cstr* pcString, size_t tSize) {
+void cstr_double_capacity_if_full(cstr* pcString, long long llSize) {
   // Avoid unnecessary reallocations.
-  if (pcString->size + tSize <= pcString->capacity) return;
+  if (pcString->size + llSize <= pcString->capacity) return;
 
   // Increase capacity until new size fits.
-  while (pcString->size + tSize > pcString->capacity) pcString->capacity *= 2;
+  while (pcString->size + llSize > pcString->capacity) pcString->capacity *= 2;
 
   // Reallocate new memory.
   pcString->cStr = realloc(pcString->cStr, sizeof(char) * pcString->capacity);
@@ -175,7 +176,7 @@ int cstr_utf8_cont(const char c) {
 /*******************************************************************************
  * Name: cstr_utf8_bytes
  *******************************************************************************/
-size_t cstr_utf8_bytes(const char* c) {
+long long cstr_utf8_bytes(const char* c) {
   if ((c[0] & 0x80) == 0x00) return 1;
 
   if ((c[0] & 0xe0) == 0xc0 &&
@@ -196,8 +197,8 @@ size_t cstr_utf8_bytes(const char* c) {
 /*******************************************************************************
  * Name: cstr_lenUtf8
  *******************************************************************************/
-size_t cstr_lenUtf8(const char* pcString, size_t* pLen) {
-  size_t lenUtf8 = 0;
+long long cstr_lenUtf8(const char* pcString, long long* pLen) {
+  long long lenUtf8 = 0;
         *pLen    = 0;
 
   // UTF char is counted if it not continues.
@@ -211,7 +212,7 @@ size_t cstr_lenUtf8(const char* pcString, size_t* pLen) {
 /*******************************************************************************
  * Name: cstr_len
  *******************************************************************************/
-size_t cstr_len(const char* pcString) {
+long long cstr_len(const char* pcString) {
   int i = 0;
   while (pcString[i] != '\0') ++i;
   return i;
@@ -244,25 +245,25 @@ int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
  * Purpose: .
  *******************************************************************************/
 cstr csNew(const char* pcString) {
-  cstr   csOut  = {0};
-  size_t tClen  = 0;
-  size_t tUlen  = cstr_lenUtf8(pcString, &tClen);
-  size_t tCsize = 0;
+  cstr      csOut  = {0};
+  long long llClen  = 0;
+  long long llUlen  = cstr_lenUtf8(pcString, &llClen);
+  long long llCsize = 0;
 
   // Includes '\0'.
-  tCsize = tClen + 1;
+  llCsize = llClen + 1;
 
   cstr_init(&csOut);
-  cstr_double_capacity_if_full(&csOut, tCsize);
+  cstr_double_capacity_if_full(&csOut, llCsize);
 
   // Copy char array to cstr.
-  for(size_t i = 0; i < tCsize; ++i)
+  for(long long i = 0; i < llCsize; ++i)
     csOut.cStr[i] = pcString[i];
 
   // Adjust parameter.
-  csOut.len     = tClen;
-  csOut.lenUtf8 = tUlen;
-  csOut.size    = tCsize;
+  csOut.len     = llClen;
+  csOut.lenUtf8 = llUlen;
+  csOut.size    = llCsize;
 
   // Do not csFree(&csOut);!
   return csOut;
@@ -337,7 +338,7 @@ void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
   cstr_double_capacity_if_full(&csOut, csAdd.size);
 
   // Now append pChars over csChr's '\0' including pChars's '\0'.
-  for(size_t i = 0; i < csAdd.size; ++i)
+  for(long long i = 0; i < csAdd.size; ++i)
     csOut.cStr[csOut.len + i] = pcAdd[i];
 
   csOut.len  = csOut.len  + csAdd.len;
@@ -353,31 +354,31 @@ void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
  * Name: csFind
  * Purpose: .
  *******************************************************************************/
-size_t csInStr(const char* pcString, const char* pcFind) {
-  cstr   csString = csNew(pcString);
-  cstr   csFind   = csNew(pcFind);
-  size_t tSearch   = 0;
-  size_t tFind     = 0;
-  size_t tPos      = -1;
+long long csInStr(const char* pcString, const char* pcFind) {
+  cstr      csString = csNew(pcString);
+  cstr      csFind   = csNew(pcFind);
+  long long llSearch = 0;
+  long long llFind   = 0;
+  long long llPos    = -1;
 
   if (csFind.len == 0)
     return -1;
 
   // Find last occurence of search-string.
-  for (tSearch = 0; tSearch < csString.len; ++tSearch) {
-    for (tFind = 0; tFind < csFind.len; ++tFind) {
-      if (csString.cStr[tSearch + tFind] != csFind.cStr[tFind])
+  for (llSearch = 0; llSearch < csString.len; ++llSearch) {
+    for (llFind = 0; llFind < csFind.len; ++llFind) {
+      if (csString.cStr[llSearch + llFind] != csFind.cStr[llFind])
         break;
     }
-    if (csFind.cStr[tFind] != '\0')
+    if (csFind.cStr[llFind] != '\0')
       continue;
-    tPos = tSearch;
+    llPos = llSearch;
   }
 
   csClear(&csString);
   csClear(&csFind);
 
-  return tPos;
+  return llPos;
 }
 
 /*******************************************************************************
@@ -414,7 +415,7 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
   cstr_double_capacity_if_full(pcsDest, llLength + 1);
 
   // Copy length chars from offset.
-  for (size_t i = 0; i < llLength; ++i)
+  for (long long i = 0; i < llLength; ++i)
     pcsDest->cStr[i] = csSource.cStr[llOffset + i];
 
   // Mind the '\0'!
@@ -429,18 +430,18 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
  * Name:  csSplit
  * Purpose: Splits a cstr string at first occurence of 'pcSplitAt'.
  *******************************************************************************/
-size_t csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt) {
-  size_t tPos   = csInStr(pcString, pcSplitAt);
-  size_t tWidth = cstr_len(pcSplitAt);
+long long csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt) {
+  long long llPos   = csInStr(pcString, pcSplitAt);
+  long long llWidth = cstr_len(pcSplitAt);
 
   // Split, if found.
-  if (tPos > -1) {
-    csMid(pcsLeft,  pcString,             0, tPos);
-    csMid(pcsRight, pcString, tPos + tWidth,   -1);
+  if (llPos > -1) {
+    csMid(pcsLeft,  pcString,               0, llPos);
+    csMid(pcsRight, pcString, llPos + llWidth,    -1);
   }
 
   // Return, where the split occured.
-  return tPos;
+  return llPos;
 }
 
 /*******************************************************************************
@@ -449,36 +450,36 @@ size_t csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* 
  *******************************************************************************/
 void csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines) {
   // Watch out, 'pcString' could be a pointer from 'pcsOut.cStr'!
-  cstr   csTmp = csNew(pcString);
-  size_t tOffMin = 0;
-  size_t tOffMax = csTmp.len - 1;
-  size_t tLen    = 0;
+  cstr      csTmp    = csNew(pcString);
+  long long llOffMin = 0;
+  long long llOffMax = csTmp.len - 1;
+  long long llLen    = 0;
 
   // Get offset of first non whitespace char from left.
-  while (cstr_check_if_whitespace(csTmp.cStr[tOffMin], bWithNewLines))
-    ++tOffMin;
+  while (cstr_check_if_whitespace(csTmp.cStr[llOffMin], bWithNewLines))
+    ++llOffMin;
 
   // Get offset of first non whitespace char from right.
-  while (cstr_check_if_whitespace(csTmp.cStr[tOffMax], bWithNewLines))
-    --tOffMax;
+  while (cstr_check_if_whitespace(csTmp.cStr[llOffMax], bWithNewLines))
+    --llOffMax;
 
   // Length of trimmed string.
-  tLen = tOffMax - tOffMin + 1;
+  llLen = llOffMax - llOffMin + 1;
 
   // Initialize pcsOut.
   csSet(pcsOut, "");
 
   // Check if length plus '0' byte fits into csOut.
-  cstr_double_capacity_if_full(pcsOut, tLen + 1);
+  cstr_double_capacity_if_full(pcsOut, llLen + 1);
 
   // Copy
-  for(size_t i = 0; i < tLen; ++i)
-    pcsOut->cStr[i] = csTmp.cStr[tOffMin + i];
+  for(long long i = 0; i < llLen; ++i)
+    pcsOut->cStr[i] = csTmp.cStr[llOffMin + i];
 
   // Complete csOut's information and don't forget the '0' byte!
-  pcsOut->cStr[tLen] = 0;
-  pcsOut->len        = tLen;
-  pcsOut->size       = tLen + 1;
+  pcsOut->cStr[llLen] = 0;
+  pcsOut->len        = llLen;
+  pcsOut->size       = llLen + 1;
 
   csFree(&csTmp);
 }
@@ -518,8 +519,8 @@ int csInput(const char* pcMsg, cstr* pcsDest) {
  * Purpose: Checks if string is ASCII or UTF-8.
  *******************************************************************************/
 int csIsUtf8(const char* pcString) {
-  size_t len     = 0;
-  size_t lenUtf8 = cstr_lenUtf8(pcString, &len);
+  long long len     = 0;
+  long long lenUtf8 = cstr_lenUtf8(pcString, &len);
 
   if (len != lenUtf8) return 1;
   return 0;
@@ -529,15 +530,15 @@ int csIsUtf8(const char* pcString) {
  * Name:  csAt
  * Purpose: Returns byte at given offset, else 0 byte.
  *******************************************************************************/
-int csAt(char* pcChar, const char* pcString, size_t tPos) {
-  size_t len = cstr_len(pcString);
+int csAt(char* pcChar, const char* pcString, long long llPos) {
+  long long len = cstr_len(pcString);
 
-  if (tPos > len || tPos < 0) {
+  if (llPos > len || llPos < 0) {
     pcChar[0] = 0;
     return 0;
   }
   // else
-  pcChar[0] = pcString[tPos];
+  pcChar[0] = pcString[llPos];
   return 1;
 }
 
@@ -545,40 +546,40 @@ int csAt(char* pcChar, const char* pcString, size_t tPos) {
  * Name:  csAtUtf8
  * Purpose: Returns UTF-8 codepoint/size at given position, else empty string.
  *******************************************************************************/
-size_t csAtUtf8(char* pcStr, const char* pcString, size_t tPos) {
-  size_t pos     = 0;
-  size_t posUtf8 = cstr_lenUtf8(pcString, &pos);
-  size_t tBytes  = 0;
+long long csAtUtf8(char* pcStr, const char* pcString, long long llPos) {
+  long long llPosChar = 0;
+  long long llPosUtf8 = cstr_lenUtf8(pcString, &llPosChar);
+  long long llBytes   = 0;
 
   // Must be a 5 byte char array for a 4 byte UTF-8 char at max. Clear it.
   pcStr[0] = pcStr[1] = pcStr[2] = pcStr[3] = pcStr[4] = 0;
 
   // Calc count of UTF-8 chars for boundary check.
-  if (tPos > posUtf8 || tPos < 0) {
+  if (llPos > llPosUtf8 || llPos < 0) {
     pcStr[0] = 0;
     return 0;
   }
 
-  // Rest vars for their actual purpose.
-  pos     = 0;
-  posUtf8 = 0;
+  // Reset vars for their actual purpose.
+  llPosChar = 0;
+  llPosUtf8 = 0;
 
   // Get offset of UTF-8 position.
-  while (posUtf8 < tPos) {
+  while (llPosUtf8 < llPos) {
     // Stop at any malformed UTF-8 char.
-    if ((tBytes = cstr_utf8_bytes(&pcString[pos])) == 0) {
+    if ((llBytes = cstr_utf8_bytes(&pcString[llPosChar])) == 0) {
       pcStr[0] = 0;
       return 0;
     }
-    pos     += tBytes;
-    posUtf8 += 1;
+    llPosChar += llBytes;
+    llPosUtf8 += 1;
   }
 
-  tBytes = cstr_utf8_bytes(&pcString[pos]);
-  for(size_t i = 0; i < tBytes; ++i)
-    pcStr[i] = pcString[pos + i];
+  llBytes = cstr_utf8_bytes(&pcString[llPosChar]);
+  for(long long i = 0; i < llBytes; ++i)
+    pcStr[i] = pcString[llPosChar + i];
 
-  return tBytes;
+  return llBytes;
 }
 
 /*******************************************************************************
