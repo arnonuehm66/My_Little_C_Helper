@@ -2,7 +2,7 @@
  ** Name: c_dynamic_array.h
  ** Purpose:  Provides differend types of dynamic arrays.
  ** Author: (JE) Jens Elstner
- ** Version: v0.3.3
+ ** Version: v0.4.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -15,6 +15,7 @@
  ** 18.04.2019  JE    Added dabXXX() functions for byte handling.
  ** 23.04.2019  JE    Changed xCount and xCapacity vars form int to size_t.
  ** 23.04.2019  JE    Changed xData vars to appropriate names.
+ ** 27.03.2020  JE    Added dasXXX() functions for size_t handling.
  *******************************************************************************/
 
 
@@ -59,11 +60,17 @@ typedef struct s_array_uint {
   size_t        sCapacity;
 } t_array_uint;
 
-typedef struct s_array_bytes {
+typedef struct s_array_byte {
   unsigned char* pBytes;
   size_t         sCount;
   size_t         sCapacity;
 } t_array_byte;
+
+typedef struct s_array_size {
+  size_t* pSize;
+  size_t  sCount;
+  size_t  sCapacity;
+} t_array_size;
 
 
 //******************************************************************************
@@ -93,6 +100,12 @@ void dabInit(t_array_byte* ptArray);
 void dabAdd(t_array_byte* ptArray, unsigned char bValue);
 void dabClear(t_array_byte* ptArray);
 void dabFree(t_array_byte* ptArray);
+
+// size_t
+void dasInit(t_array_size* ptArray);
+void dasAdd(t_array_size* ptArray, size_t bValue);
+void dasClear(t_array_size* ptArray);
+void dasFree(t_array_size* ptArray);
 
 
 //******************************************************************************
@@ -280,6 +293,52 @@ void dabClear(t_array_byte *ptArray) {
 void dabFree(t_array_byte *ptArray) {
   if (ptArray->pBytes != NULL)
     free(ptArray->pBytes);
+}
+
+//******************************************************************************
+//* size_t
+
+/*******************************************************************************
+ * Name:  dasInit
+ * Purpose: Initialze dynamic array of bytes.
+ *******************************************************************************/
+void dasInit(t_array_size *ptArray) {
+  ptArray->sCount    = 0;
+  ptArray->sCapacity = C_DYNAMIC_ARRAYS_INITIAL_CAPACITY;
+  ptArray->pSize     = (size_t*) malloc(sizeof(size_t) * ptArray->sCapacity);
+}
+
+/*******************************************************************************
+ * Name:  dasAdd
+ * Purpose: Adds a value to a dynamic array.
+ *******************************************************************************/
+void dasAdd(t_array_size *ptArray, size_t bValue) {
+  // Check and double cap, if necessary.
+  if (ptArray->sCount + 1 > ptArray->sCapacity) {
+    ptArray->sCapacity *= 2;
+    ptArray->pSize      = (size_t*) realloc(ptArray->pSize, sizeof(size_t) * ptArray->sCapacity);
+  }
+
+  // Set value in next slot and increment counter.
+  ptArray->pSize[ptArray->sCount++] = bValue;
+}
+
+/*******************************************************************************
+ * Name:  dasClear
+ * Purpose: Reset dynamic array.
+ *******************************************************************************/
+void dasClear(t_array_size *ptArray) {
+  dasFree(ptArray);
+  dasInit(ptArray);
+}
+
+/*******************************************************************************
+ * Name:  dasFree
+ * Purpose: Free memory of dynamic array.
+ *******************************************************************************/
+void dasFree(t_array_size *ptArray) {
+  if (ptArray->pSize != NULL)
+    free(ptArray->pSize);
 }
 
 

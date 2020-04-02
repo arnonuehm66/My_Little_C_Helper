@@ -24,7 +24,7 @@
  ** 12.02.2019  JE    Now free csItem in datetime2ticks() to avoid memory leak.
  ** 07.03.2019  JE    Now structs are all named.
  ** 23.04.2019  JE    Now use c_dynamic_arrays.h v0.3.3.
- ** 24.04.2019  JE    Changed int's to -time_t's ticks.
+ ** 24.04.2019  JE    Changed int's to time_t's ticks.
  ** 31.05.2019  JE    Added openFile() and getFileSize() for convenience.
  ** 11.06.2019  JE    Now use c_string.h v0.11.1 with UTF-8 support.
  ** 11.06.2019  JE    Extended debug() and added printCsInternals().
@@ -33,6 +33,20 @@
  ** 10.07.2019  JE    Added toInt() working with endian.h.
  ** 17.07.2019  JE    Now tm_isdst is set permanentely to 0 in datetime2ticks().
  ** 17.07.2019  JE    Added '-d' for string -> ticks -> string conversion test.
+ ** 30.11.2019  JE    Outsourced standard functions to stdfcns.c.
+ ** 07.01.2020  JE    Added a default '-d' whwn nothing is given.
+ ** 17.01.2020  JE    Now use functions, includes and defines from 'stdfcns.c'.
+ ** 21.01.2020  JE    Now use v0.4.2 rxMatcher() functions.
+ ** 21.01.2020  JE    Now use c_my_regex.h v0.6.1.
+ ** 11.03.2020  JE    Now use stdfcns.c v0.3.1.
+ ** 11.03.2020  JE    Minor fixes in printf format string.
+ ** 20.03.2020  JE    Added t_coord and changed toWgs84() accordingly.
+ ** 20.03.2020  JE    Now use c_string.h v0.13.1.
+ ** 24.03.2020  JE    Now use c_my_regex.h v0.6.3.
+ ** 31.03.2020  JE    Now use c_my_regex.h v0.7.2.
+ ** 31.03.2020  JE    Now use c_dynamic_array.h v0.4.1.
+ ** 02.04.2020  JE    Added ability to read big files in chunks of 1GiB + 1KiB.
+ ** 02.04.2020  JE    Added regex and converter functions.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -42,14 +56,10 @@
 //******************************************************************************
 //* includes & namespaces
 
-#define _XOPEN_SOURCE 700  // To get POSIX 2008 (SUS) strptime() and mktime()
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <math.h>
-#include <sys/stat.h>
-#include <endian.h>       // To get __LITTLE_ENDIAN
+
 
 //#include "../../libs/c_string.h"
 //#include "../../libs/c_my_regex.h"
@@ -63,38 +73,46 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.33"
+#define ME_VERSION "0.0.44"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
 #define ERR_FILE  0x02
+#define ERR_ICONV 0x03
+#define ERR_REGEX 0x04
 #define ERR_ELSE  0xff
 
-#define sERR_ARGS "Argument error"
-#define sERR_FILE "File error"
-#define sERR_ELSE "Unknown error"
-
-// isNumber()
-#define NUM_NONE  0x00
-#define NUM_INT   0x01
-#define NUM_FLOAT 0x02
+#define sERR_ARGS  "Argument error"
+#define sERR_FILE  "File error"
+#define sERR_ICONV "iconv error"
+#define sERR_REGEX "Regex error"
+#define sERR_ELSE  "Unknown error"
 
 // getOptions(): Defines empty values.
-#define NO_TICK -1
+#define NO_TICK ((time_t) ~0)   // Fancy contruction to get a (-1). ;o)
+
+
+//******************************************************************************
+//* outsourced standard functions, includes and defines
+
+//#include "../../libs/stdfcns.c"
+#include "stdfcns.c"
 
 
 //******************************************************************************
 //* typedefs
 
-// For convienience.
-typedef unsigned int  uint;
-typedef unsigned char uchar;
-typedef long double   ldbl;
-typedef long long     ll;
-typedef long int      li;
-//typedef int           bool;
-//const   int           false = 0;
-//const   int           true  = 1;
+// toWgs84().
+typedef struct s_coord {
+  ldbl ldlVal;
+  cstr csVal;
+} t_coord;
+
+// Binary data chunks from file.
+typedef struct s_data {
+  uchar*  pBytes;
+  size_t  sSize;
+} t_data;
 
 // Arguments and options.
 typedef struct s_options {
@@ -111,15 +129,33 @@ typedef struct s_options {
   time_t tDateTime;
 } t_options;
 
-// toInt() bytes to int converter.
-typedef union u_char2Int{
-  char ac4Bytes[4];
-  int  iInt;
-} t_char2Int;
-
+// Entry composition
+typedef struct s_entry {
+  int     iType;
+  t_coord tcLon;
+  t_coord tcLat;
+  cstr    csLbl;
+} t_entry;
 
 //******************************************************************************
 //* Global variables
+
+char* g_cType[] = {
+                    "-",
+                    "Entered via map, zip or coord.", // 1
+                    "Entered via favorite",           // 2
+                    "Home location",                  // 3
+                    "Entered via address",            // 4
+                    "Entered via POI",                // 5
+                    "Start of last calculated route", // 6
+                    "-"
+                  };
+
+t_rx_matcher g_rx_c2Lbl        = {0};
+t_rx_matcher g_rx_c2Coords    = {0};
+t_rx_matcher g_rx_c7TomTomLive = {0};
+
+t_entry g_tE;
 
 // Arguments
 t_options    g_tOpts; // CLI options and arguments.
@@ -128,15 +164,6 @@ t_array_cstr g_tArgs; // Free arguments.
 
 //******************************************************************************
 //* Functions
-
-/*******************************************************************************
- * Name:  version
- * Purpose: Print version and exit program.
- *******************************************************************************/
-void version(void) {
-  printf("%s v%s\n", ME_NAME, ME_VERSION);
-  exit(ERR_NOERR);
-}
 
 /*******************************************************************************
  * Name:  usage
@@ -166,7 +193,7 @@ void usage(int iErr, const char* pcMsg) {
   "  ox=hex:        this is an hex/dec option eating a hex/dec string\n"
   "  -y yyyy:       min year to consider a track as valid (default 2002)\n"
   "  -Y yyyy:       max year to consider a track as valid (default to 'now')\n"
-  "  -d 'yyyy/mm/dd, hh:mm:ss':"
+  "  -d 'yyyy/mm/dd, hh:mm:ss':\n"
   "                 convert string to ticks and back to string for testing\n"
   "  -h|--help:     print this help\n"
   "  -v|--version:  print version of program\n"
@@ -193,9 +220,11 @@ void dispatchError(int rv, const char* pcMsg) {
 
   if (rv == ERR_NOERR) return;
 
-  if (rv == ERR_ARGS) csSet(&csErr, sERR_ARGS);
-  if (rv == ERR_FILE) csSet(&csErr, sERR_FILE);
-  if (rv == ERR_ELSE) csSet(&csErr, sERR_ELSE);
+  if (rv == ERR_ARGS)  csSet(&csErr, sERR_ARGS);
+  if (rv == ERR_FILE)  csSet(&csErr, sERR_FILE);
+  if (rv == ERR_ICONV) csSet(&csErr, sERR_ICONV);
+  if (rv == ERR_REGEX) csSet(&csErr, sERR_REGEX);
+  if (rv == ERR_ELSE)  csSet(&csErr, sERR_ELSE);
 
   // Set to '<err>: <message>', if a message was given.
   if (csMsg.len != 0) csSetf(&csErr, "%s: %s", csErr.cStr, csMsg.cStr);
@@ -204,177 +233,16 @@ void dispatchError(int rv, const char* pcMsg) {
 }
 
 /*******************************************************************************
-* Name: shift
-* Purpose: Shifts one argument from CLI and increments the counter.
-*******************************************************************************/
-void shift(cstr* pcsRv, int* pI, int argc, char* argv[]) {
-   csSet(pcsRv, "");
-   if (*pI < argc) csSet(pcsRv, argv[(*pI)++]);
-}
-
-/*******************************************************************************
- * Name:  isNumber
- * Purpose: Check if string is a int or float number.
+ * Name:  initEntry
+ * Purpose: Inits entry's struct to 'zero'.
  *******************************************************************************/
-int isNumber(cstr sString, int* piSign) {
-  int iDecPt = 0;
-
-  // Assume no sign.
-  *piSign = 0;
-
-  // Check for plus or minus sign in front of number.
-  if (sString.cStr[0] == '-')
-    *piSign = -1;
-
-  if (sString.cStr[0] == '+')
-    *piSign = 1;
-
-  // Continuation depends wether sign was found.
-  // Check for digits and decimal point.
-  for (int i = (*piSign != 0) ? 1 : 0; i < sString.len; ++i) {
-    if (sString.cStr[i] == '.') {
-      // Only one decimal point allowed!
-      if (iDecPt)
-        return NUM_NONE;
-      else {
-        iDecPt = 1;
-        continue;
-      }
-    }
-
-    // Not a digit, no number.
-    if (sString.cStr[i] < '0' || sString.cStr[i] > '9')
-      return NUM_NONE;
-  }
-
-  if (iDecPt)
-    return NUM_FLOAT;
-
-  return NUM_INT;
-}
-
-/*******************************************************************************
- * Name:  ticks2datetime
- * Purpose: Converts integer to "2017/11/03, 11:14:23" + txt string.
- *******************************************************************************/
-void ticks2datetime(cstr* pcsTxt, const char* pacTxt, time_t tTicks) {
-  char       acTime[30] = {0};
-  struct tm* psTime     = gmtime(&tTicks);
-
-  // Returns "2017/11/03, 11:14:23" => 21 Bytes including '\0' Byte.
-  strftime(acTime, sizeof(acTime), "%Y/%m/%d, %H:%M:%S", psTime);
-  csSetf(pcsTxt, "%s%s", acTime, pacTxt);
-}
-
-/*******************************************************************************
- * Name:  datetime2ticks
- * Purpose: Converts "2017/11/03, 11:14:23" string to ticks.
- *******************************************************************************/
-time_t datetime2ticks(int fUseString, const char* pcTime,
-                      int iYear, int iMonth, int iDay,
-                      int iHour, int iMin,   int iSec) {
-  cstr      csItem  = csNew("");
-  struct tm sTime   = {0};
-
-  //                   1111111111
-  //         01234567890123456789
-  // Assume "2017/11/03, 11:14:23"
-  if (fUseString) {
-    csMid(&csItem, pcTime,  0, 4);
-    iYear = (int) cstr2ll(csItem);
-
-    csMid(&csItem, pcTime,  5, 2);
-    iMonth = (int) cstr2ll(csItem);
-
-    csMid(&csItem, pcTime,  8, 2);
-    iDay = (int) cstr2ll(csItem);
-
-    csMid(&csItem, pcTime, 12, 2);
-    iHour = (int) cstr2ll(csItem);
-
-    csMid(&csItem, pcTime, 15, 2);
-    iMin = (int) cstr2ll(csItem);
-
-    csMid(&csItem, pcTime, 18, 2);
-    iSec = (int) cstr2ll(csItem);
-  }
-
-  // Corrections
-  iYear  -= 1900;
-  iMonth -= 1;
-
-  // Fille struct;
-  sTime.tm_year = iYear;    // Year	- 1900.
-  sTime.tm_mon  = iMonth;   // Month.   [0-11]
-  sTime.tm_mday = iDay;     // Day.     [1-31]
-  sTime.tm_hour = iHour;    // Hours.   [0-23]
-  sTime.tm_min  = iMin;     // Minutes. [0-59]
-  sTime.tm_sec  = iSec;     // Seconds. [0-60] (1 leap second)
-
-  // UTC should have no daylight saving time!
-  sTime.tm_isdst = 0;
-
-  csFree(&csItem);
-
-  // Just tick away ...
-  return mktime(&sTime) - timezone;
-}
-
-/*******************************************************************************
- * Name:  getHexIntParm
- * Purpose: Converts parameter entered as hexadecimal with '0x' prefix or as
- *          decimal with postfix K, M, G (meaning Kilo- Mega- and Giga-bytes
- *          based on 1024).
- *******************************************************************************/
-int getHexIntParm(cstr csParm, int* piErr) {
-  cstr csPre  = csNew("");
-  cstr csPost = csNew("");
-  int  fHex   = 0;
-  int  iPost  = 1;
-  int  iSign  = 0;
-  int  iVal   = 0;
-
-  *piErr = 0;
-
-  // Sanity check.
-  if (csParm.len == 0) {
-    *piErr = 1;
-    return 0;
-  }
-
-  // Get possible pre- and postfixes.
-  csMid(&csPre,  csParm.cStr,  0, 2);
-  csMid(&csPost, csParm.cStr, -1, 1);
-
-  // Found hex prefix.
-  if (!strcmp(csPre.cStr, "0x")) fHex = 1;
-
-  // Calc possible multiplier from integer postfix.
-  if (csPost.cStr[0] == 'k') iPost = 1024;
-  if (csPost.cStr[0] == 'K') iPost = 1024;
-  if (csPost.cStr[0] == 'm') iPost = 1024 * 1024;
-  if (csPost.cStr[0] == 'M') iPost = 1024 * 1024;
-  if (csPost.cStr[0] == 'g') iPost = 1024 * 1024 * 1024;
-  if (csPost.cStr[0] == 'G') iPost = 1024 * 1024 * 1024;
-
-  // Hex or integer
-  if (fHex == 1)
-    iVal = (int) csHex2ll(csParm);
-  else
-    iVal = ((int) cstr2ll(csParm)) * iPost;
-
-  // Remove postfix to use isNumber().
-  if (iPost > 1) csMid(&csParm, csParm.cStr, 0, csParm.len - 1);
-
-  // Error checks.
-  if (csParm.len == 0)                                  *piErr = 1;
-  if (fHex == 1 && iPost > 1)                           *piErr = 1;
-  if (fHex == 0 && isNumber(csParm, &iSign) != NUM_INT) *piErr = 1;
-
-  csFree(&csPre);
-  csFree(&csPost);
-
-  return iVal;
+void initEntry() {
+  g_tE.iType         = 0;
+  g_tE.tcLon.ldlVal = 0.0;
+  g_tE.tcLon.csVal  = csNew("-");
+  g_tE.tcLat.ldlVal = 0.0;
+  g_tE.tcLat.csVal  = csNew("-");
+  g_tE.csLbl         = csNew("");
 }
 
 /*******************************************************************************
@@ -560,82 +428,74 @@ next_argument:
   csFree(&csArgv);
   csFree(&csRv);
   csFree(&csOpt);
-
-  return;
 }
 
 /*******************************************************************************
- * Name:  openFile
- * Purpose: Opens a file or throws an error.
+ * Name:  initMatcher
+ * Purpose: Initialize Matcher struct with regex string.
  *******************************************************************************/
-FILE* openFile(const char* pcName, const char* pcFlags) {
-  FILE* hFile;
-
-  if (!(hFile = fopen(pcName, pcFlags))) {
-    cstr csMsg = csNew("");
-    csSetf(&csMsg, "Can't open '%s'", pcName);
-    dispatchError(ERR_FILE, csMsg.cStr);
-  }
-  return hFile;
+void initMatcher(t_rx_matcher* pMatcher, const char* pcRegex) {
+  cstr csErr = csNew("");
+  if (rxInitMatcher(pMatcher, pcRegex, "", &csErr) != RX_NO_ERROR)
+    dispatchError(ERR_REGEX, csErr.cStr);
 }
 
 /*******************************************************************************
- * Name:  getFileSize
- * Purpose: Returns size of file in bytes.
+ * Name:  initGlobalRegexes
+ * Purpose: Assembles all global regexes.
  *******************************************************************************/
-li getFileSize(FILE* hFile) {
-  li liSize = 0;
+void initGlobalRegexes(void) {
+  char* C               = "[\\x00-\\xff]";
+  cstr  cs_rx_cPrec     = csNew("");
+  cstr  cs_rx_cType     = csNew("");
+  cstr  cs_rx_c2Coords1 = csNew("");
+  cstr  cs_rx_c2Coords2 = csNew("");
+  cstr  cs_rx_temp      = csNew("");
 
-  fseek(hFile, 0, SEEK_END);
-  liSize = (li) ftell(hFile);
-  fseek(hFile, 0, SEEK_SET);
+  //  Main header fields:          Tag   Length  Tag Length  Value
+  csSetf(&cs_rx_cPrec,     "(?x: \\x81\\x19  \\x03  \\x68  \\x01  (%s) )", C);
+  csSetf(&cs_rx_cType,     "(?x: \\x82\\x19  \\x03  \\x68  \\x01  (%s) )", C);
+  csSetf(&cs_rx_c2Coords1, "(?x: \\x83\\x19  \\x0a  \\x66  \\x08  (%s{4})(%s{4}) )", C, C);
+  csSetf(&cs_rx_c2Coords2, "(?x: \\x84\\x19  \\x0a  \\x66  \\x08  (%s{4})(%s{4}) )", C, C);
 
-  return liSize;
+  // Rest of labels and coordinates.
+  csSetf(&cs_rx_temp, "(?x: \\x85\\x19 (%s) \\x64 (%s) )", C, C);
+  initMatcher(&g_rx_c2Lbl, cs_rx_temp.cStr);
+
+  csSetf(&cs_rx_temp, "(?x: \\xf6\\x1c \\x0a \\x66 \\x08 (%s{4})(%s{4}) )", C, C);
+  initMatcher(&g_rx_c2Coords, cs_rx_temp.cStr);
+
+  //  qr/
+  //    rx_cPrec rx_cType.cStr rx_c2Coords_1.cStr rx_c2Coords_2.cStr
+  //      (C+?)
+  //    (?= (?: rx_cPrec rx_cType rx_c2Coords_1 rx_c2Coords_2 ) | \Z | )
+  //  /xo
+  // Last " | )" must be there to prevent ([\x00-\xff]?) causing limit errors!
+  csSetf(&cs_rx_temp,
+           "(?x:"
+             "%s %s %s %s"
+               "(%s?)"
+             "(?= (?: %s %s %s %s ) | \\Z | )"
+           ")",
+           cs_rx_cPrec.cStr, cs_rx_cType.cStr, cs_rx_c2Coords1.cStr, cs_rx_c2Coords2.cStr,
+           C,
+           cs_rx_cPrec.cStr, cs_rx_cType.cStr, cs_rx_c2Coords1.cStr, cs_rx_c2Coords2.cStr
+        );
+  initMatcher(&g_rx_c7TomTomLive, cs_rx_temp.cStr);
+
+  csFree(&cs_rx_cPrec);
+  csFree(&cs_rx_cType);
+  csFree(&cs_rx_c2Coords1);
+  csFree(&cs_rx_c2Coords2);
+  csFree(&cs_rx_temp);
 }
 
 /*******************************************************************************
- * Name:  toInt
- * Purpose: Converts up to 4 bytes to integer.
+ * Name:  freeRxStructs
+ * Purpose: Free all global regex structs.
  *******************************************************************************/
-int toInt(char* pc4Bytes, int iCount) {
-  t_char2Int tInt = {0};
-    for (int i = 0; i < iCount; ++i)
-#     if __BYTE_ORDER == __LITTLE_ENDIAN
-        tInt.ac4Bytes[i] = pc4Bytes[i];
-#     else
-        tInt.ac4Bytes[i] = pc4Bytes[iCount - i - 1];
-#     endif
-  return tInt.iInt;
-}
-
-/*******************************************************************************
- * Name:  round
- * Purpose: Returns float, rounded to given count of digits.
- *******************************************************************************/
-ldbl roundN(ldbl ldA, int iDigits) {
-  int iFactor = 1;
-  while (iDigits--) iFactor *= 10;
-  return ((ldbl) ((int) (ldA * iFactor + 0.5))) / iFactor;
-}
-
-/*******************************************************************************
- * Name:  toWgs84
- * Purpose: Converts coordinates to WGS84.
- *******************************************************************************/
-int toWgs84(ldbl* pldblLon, ldbl* pldblLat) {
-  // Convert given cordinates to WGS84.
-  *pldblLon = *pldblLon / 1e5;
-  *pldblLat = *pldblLat / 1e5;
-
-  // Round to 5 digits.
-  *pldblLon = roundN(*pldblLon, 5);
-  *pldblLat = roundN(*pldblLat, 5);
-
-  // Check coordinate's integrity.
-  if (*pldblLon < -180 || *pldblLon > 180) return 0;
-  if (*pldblLat <  -90 || *pldblLat >  90) return 0;
-
-  return 1;
+void freeRxStructs(void) {
+  rxFreeMatcher(&g_rx_c7TomTomLive);
 }
 
 /*******************************************************************************
@@ -649,12 +509,159 @@ void printHeader(void) {
   printf("\n");
 }
 
+//*******************************************************************************
+//* Name:  getLable
+//* Purpose: Cut labels from tlv: 85 19 l1 64 l2 "data".
+//*******************************************************************************
+void getLable(t_rx_matcher* rxMatcher, t_data* ptData, cstr* pcsLbl) {
+  cstr csLbl = csNew("");
+  int  iOff  = rxMatcher->dasEnd.pSize[2];
+  int  iLen1 = toInt((char*) &ptData->pBytes[rxMatcher->dasStart.pSize[1]], 1);
+  int  iLen2 = toInt((char*) &ptData->pBytes[rxMatcher->dasStart.pSize[2]], 1);
+
+  // Error check.
+  if (iLen1 != iLen2 + 2) return;
+
+  // Create string with special printf format using a length and an offset.
+  csSetf(&csLbl, "%.*s", iLen2, &ptData->pBytes[iOff]);
+
+  csSanitize(&csLbl);
+
+  csSet(pcsLbl, csLbl.cStr);
+
+  csFree(&csLbl);
+}
+
+//*******************************************************************************
+//* Name:  getLblWrapper
+//* Purpose: Ease the use of getLable().
+//*******************************************************************************
+void getLblWrapper(t_rx_matcher* rxM, t_data* ptD, size_t sOff, cstr* csLbl) {
+  cstr csErr = csNew("");
+  int  iErr  = 0;
+
+  // Shorten by copying.
+  char*  pB = (char*) ptD->pBytes;
+  size_t sS = ptD->sSize;
+
+  // Fetch matched string.
+  if (rxMatch(rxM, sOff, pB, sS, &iErr, &csErr)) {
+    getLable(rxM, ptD, csLbl);
+    if (! csIconv(csLbl, csLbl, "ISO8859-1", "UTF-8//TRANSLIT"))
+      dispatchError(ERR_ICONV, "codepage conversion failed");
+  }
+}
+
+//*******************************************************************************
+//* Name:  getLables
+//* Purpose: Searches for the labels and converts them to utf8.
+//*******************************************************************************
+void getLables(t_data* ptD, size_t sOff) {
+  getLblWrapper(&g_rx_c2Lbl, ptD, sOff, &g_tE.csLbl);
+}
+
+/*******************************************************************************
+ * Name:  toWgs84
+ * Purpose: Converts coordinates to WGS84.
+ *******************************************************************************/
+int toWgs84(t_coord* ptcLon, t_coord* ptcLat) {
+  // Convert given cordinates to WGS84.
+  ptcLon->ldlVal = ptcLon->ldlVal / 1e5;
+  ptcLat->ldlVal = ptcLat->ldlVal / 1e5;
+
+  // Round to 5 digits.
+  ptcLon->ldlVal = roundN(ptcLon->ldlVal, 5);
+  ptcLat->ldlVal = roundN(ptcLat->ldlVal, 5);
+
+  // Check coordinate's integrity.
+  if (ptcLon->ldlVal < -180.0 || ptcLon->ldlVal > 180.0) {
+    ptcLon->ldlVal = 0;
+    ptcLat->ldlVal = 0;
+    return 0;
+  }
+  if (ptcLat->ldlVal <  -90.0 || ptcLat->ldlVal >  90.0) {
+    ptcLon->ldlVal = 0;
+    ptcLat->ldlVal = 0;
+    return 0;
+  }
+
+  // Write to 5 digits formated floating points into srings.
+  csSetf(&ptcLon->csVal, "%.5Lf", ptcLon->ldlVal);
+  csSetf(&ptcLat->csVal, "%.5Lf", ptcLat->ldlVal);
+
+  return 1;
+}
+
+//*******************************************************************************
+//* Name:  getCoord
+//* Purpose: Converts one or two coordinate pairs from bin to integer.
+//*******************************************************************************
+void getCoord(t_rx_matcher* rxM, t_data* ptD, ldbl* ldLo1, ldbl* ldLa1, ldbl* ldLo2, ldbl* ldLa2) {
+  *ldLo1 = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[1]], 4);
+  *ldLa1 = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[2]], 4);
+  if (! (ldLo2 != NULL && ldLa2 != NULL)) return;
+  *ldLo2 = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[3]], 4);
+  *ldLa2 = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[4]], 4);
+}
+
+//*******************************************************************************
+//* Name:  getCordWrapper
+//* Purpose: Ease the use of getCoord().
+//*******************************************************************************
+void getCordWrapper(t_rx_matcher* rxM, t_data* ptD, size_t sOff, t_coord* tcLon1, t_coord* tcLat1, t_coord* tcLon2, t_coord* tcLat2) {
+  cstr csErr = csNew("");
+  int  iErr  = 0;
+
+  // Shorten by copying.
+  char*  pB    = (char*) ptD->pBytes;
+  size_t sS    = ptD->sSize;
+  ldbl*  pLon1 = &tcLon1->ldlVal;
+  ldbl*  pLat1 = &tcLat1->ldlVal;
+  ldbl*  pLon2 = &tcLon2->ldlVal;
+  ldbl*  pLat2 = &tcLat2->ldlVal;
+
+  // Get one or two pairs of coordinates from matches.
+  if (rxMatch(rxM, sOff, pB, sS, &iErr, &csErr)) {
+    getCoord(rxM, ptD, pLon1, pLat1, pLon2, pLat2);
+    toWgs84(tcLon1, tcLat1);
+    if (tcLon2 != NULL && tcLat2 != NULL)
+      toWgs84(tcLon2, tcLat2);
+  }
+
+  csFree(&csErr);
+}
+
+//*******************************************************************************
+//* Name:  getCoordinates
+//* Purpose: Searches for rest of coordinate pairs and converts them to wgs84.
+//*******************************************************************************
+void getCoordinates(t_data* ptD, size_t sOff) {
+  getCordWrapper(&g_rx_c2Coords, ptD, sOff, &g_tE.tcLon, &g_tE.tcLat, NULL, NULL);
+}
+
 /*******************************************************************************
  * Name:  getData
  * Purpose: Gets raw bytes and converts them to readable data.
  *******************************************************************************/
-int getData(FILE* hFile) {
-  return 0;
+int getData(t_rx_matcher* rxM, t_data* ptD) {
+  size_t sPos = rxM->dasStart.pSize[0];
+
+  // Convert matched bytes.
+  g_tE.iType        = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[2]], 1);
+  g_tE.tcLon.ldlVal = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[3]], 4);
+  g_tE.tcLat.ldlVal = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[4]], 4);
+
+  // Quick error check.
+  if (g_tE.iType == 0) return 0;
+
+  // Convert and error check.
+  if (! toWgs84(&g_tE.tcLon, &g_tE.tcLat)) return 0;
+
+  // Get rest of labels and coordinates.
+  getLables(ptD, sPos);
+  getCoordinates(ptD, sPos);
+
+  return 1;
 }
 
 /*******************************************************************************
@@ -682,24 +689,24 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   printf("Flags: '%s'\n",   pcFlags);
 
   // Compile regex and init global matcher struct.
-  if (rxInitMatcher(&rxMatcher, 0, pcToSearch, pcRegex, pcFlags, &csErr) != RX_NO_ERROR) {
+  if (rxInitMatcher(&rxMatcher, pcRegex, pcFlags, &csErr) != RX_NO_ERROR) {
     printf("%s\n", csErr.cStr);
     goto free_and_exit;
   }
 
   // rxMatch() crams all sub-matches into an intenal cstr array and signals, if
   // matching reached end of string.
-  printf("Start offset = %i\n", rxMatcher.iPos);
-  while (rxMatch(&rxMatcher, &iErr, &csErr)) {
-    for (int i = 0; i < rxMatcher.dacsMatches.sCount; ++i)
-      printf("$%d = '%s'\n", i, rxMatcher.dacsMatches.pStr[i].cStr);
-    printf("Next offset = %i\n", rxMatcher.iPos);
+  printf("Start offset = %lu\n", rxMatcher.sPos);
+  while (rxMatch(&rxMatcher, RX_KEEP_POS, pcToSearch, RX_NO_COUNT, &iErr, &csErr)) {
+    for (int i = 0; i < rxMatcher.dacsMatch.sCount; ++i)
+      printf("$%d = '%s'\n", i, rxMatcher.dacsMatch.pStr[i].cStr);
+    printf("Next offset = %lu\n", rxMatcher.sPos);
   }
   printf("----\n");
 
   // Free memory of all used structs.
 free_and_exit:
-  rxDelMatcher(&rxMatcher);
+  rxFreeMatcher(&rxMatcher);
 }
 
 /*******************************************************************************
@@ -709,11 +716,11 @@ void printCsInternals(cstr* pcsStr) {
   char   cStr[5] = {0}; // To host a max UTF-8 char-string.
   size_t tSize   = 0;
 
-  printf("cstr->len      = %li\n", pcsStr->len);
-  printf("cstr->lenUtf8  = %li\n", pcsStr->lenUtf8);
-  printf("cstr->size     = %li\n", pcsStr->size);
-  printf("cstr->capacity = %li\n", pcsStr->capacity);
-  printf("cstr->cstr     = %s",    pcsStr->cStr);
+  printf("cstr->len      = %lli\n", pcsStr->len);
+  printf("cstr->lenUtf8  = %lli\n", pcsStr->lenUtf8);
+  printf("cstr->size     = %lli\n", pcsStr->size);
+  printf("cstr->capacity = %lli\n", pcsStr->capacity);
+  printf("cstr->cstr     = %s",     pcsStr->cStr);
   if (csIsUtf8(pcsStr->cStr)) printf(" (UTF-8)\n"); else printf(" (ASCII)\n");
   printf("--------------------------------------------------------------------------------\n");
   for(size_t i = 0; i < pcsStr->lenUtf8; ++i) {
@@ -748,6 +755,11 @@ void debug(void) {
 
   ticks2datetime(&csMin, " (UTC)", g_tOpts.tTicksMin);
   ticks2datetime(&csMax, " (UTC)", g_tOpts.tTicksMax);
+
+  // Set a proper default value, if nothng was given at cli.
+  if (g_tOpts.csDateTime.len == 0) {
+    csSet(&g_tOpts.csDateTime, "2019/07/12, 12:00:00");
+  }
 
   // Convert string to ticks and back for testing of both utc time functions.
   g_tOpts.tDateTime = datetime2ticks(1, g_tOpts.csDateTime.cStr, 0, 0, 0, 0, 0, 0);
@@ -793,30 +805,87 @@ void debug(void) {
   exit(0);
 }
 
+/*******************************************************************************
+ * Name:  readBytes2ByteArray
+ * Purpose: Reads count bytes at offset into the dynamic byte array.
+ *******************************************************************************/
+int readBytes2ByteArray(t_data* ptData, size_t sOff, size_t sCount, FILE* hFile) {
+  // Set file to offset befor reading from it!
+  fseek(hFile, sOff, SEEK_SET);
+
+  // Allocate memory only once.
+  if (ptData->pBytes == NULL) ptData->pBytes = (uchar*) malloc(sCount);
+
+  // Now read all
+  ptData->sSize = fread(ptData->pBytes, sizeof(char), sCount, hFile);
+
+  // No bytes is the end of file.
+  if (ptData->sSize == 0) {
+    free(ptData->pBytes);
+    return 0;
+  }
+
+  return 1;
+}
+
+/*******************************************************************************
+ * Name:  getNextDataChunk
+ * Purpose: Wrapper function for readBytes2ByteArray().
+ *******************************************************************************/
+int getNextDataChunk(t_data* ptData, size_t sChunkSize, size_t sChunk, size_t sTwice, FILE* hFile) {
+  return readBytes2ByteArray(ptData, sChunk * sChunkSize, sChunkSize + sTwice, hFile);
+}
+
 
 //******************************************************************************
 //* main
 
 int main(int argc, char *argv[]) {
-  FILE* hFile;
+  FILE*  hFile  = NULL;
+  size_t sOff   = 0;
+  size_t sChunk = 0;
+
+  // 1 GiB chunks with 1 KiB overlap.
+  size_t sChunkSize = 1024 * 1024 * 1024;
+  size_t sTwice     = 1024;
+
+  // Regex helper vars.
+  t_data tData = {0};
+  cstr   csErr = csNew("");
+  int    iErr  = 0;
 
   // Get options and dispatch errors, if any.
   getOptions(argc, argv);
 
-  // For timezone var in datetime2ticks().
-  tzset();
+  initGlobalRegexes();
+
+  initTimeFunctions();
 
   debug();  // Delete, when debugging is finished.
 
   printHeader();
+
+  // 'tData' will be initialized and destroyed in 'getNextDataChunk()'.
 
   // Get all data from all files.
   for (int i = 0; i < g_tArgs.sCount; ++i) {
     hFile = openFile(g_tArgs.pStr[i].cStr, "rb");
 //-- file ----------------------------------------------------------------------
     while (!feof(hFile)) {
-      getData(hFile);
-      printEntry(0);
+      sChunk       = 0;
+      tData.pBytes = NULL;
+      tData.sSize  = 0;
+      while (getNextDataChunk(&tData, sChunkSize, sChunk, sTwice, hFile)) {
+        g_rx_c7TomTomLive.sPos = 0; // Reset start of regex for each chunk.
+        while (rxMatch(&g_rx_c7TomTomLive, RX_KEEP_POS, (char*) tData.pBytes, tData.sSize, &iErr, &csErr)) {
+          // Get global offset.
+          sOff = sChunk * sChunkSize + g_rx_c7TomTomLive.dasStart.pSize[0];
+
+          if (! getData(&g_rx_c7TomTomLive, &tData)) continue;
+          printEntry(sOff);
+        }
+        ++sChunk;
+      }
     }
 //-- file ----------------------------------------------------------------------
     fclose(hFile);

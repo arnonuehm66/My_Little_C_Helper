@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.11.5
+ ** Version: v0.13.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -36,10 +36,12 @@
  ** 06.06.2019  JE    Added lenUtf8 in struct, cstr_utf8_conts(),
  **                   cstr_utf8_bytes() and cstr_lenUtf8().
  ** 06.06.2019  JE    Added csIsUtf8(), csAt() and csAtUtf8().
- ** 11.06.2019  JE    Changed all positions and length ints into long long.
+ ** 11.06.2019  JE    Changed all positions and length ints into size_t.
  ** 07.08.2019  JE    Changed all pos and off from size_t to long long in csMid.
  ** 30.08.2019  JE    Changed all size_t to long long due to unsigned int bugs.
  ** 06.10.2019  JE    Changed rv of csAtUtf8() and cstr_utf8_bytes to int.
+ ** 20.03.2020  JE    Added csIconv() wrapping codepage converter library.
+ ** 21.03.2020  JE    Added csSanitize().
  *******************************************************************************/
 
 
@@ -55,6 +57,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <iconv.h>
 
 
 //******************************************************************************
@@ -84,14 +87,14 @@ typedef struct s_cstr {
 //* Makes for a better function's arrangement.
 
 // Internal functions.
-void                         cstr_init(cstr* pcString);
-void                        cstr_check(cstr* pcString);
+void      cstr_init(cstr* pcString);
+void      cstr_check(cstr* pcString);
 void      cstr_double_capacity_if_full(cstr* pcString, long long llSize);
-int                     cstr_utf8_cont(const char c);
-int                    cstr_utf8_bytes(const char* c);
-long long                 cstr_lenUtf8(const char* pcString, long long* pLen);
-long long                     cstr_len(const char* pcString);
-int           cstr_check_if_whitespace(const char cChar, int bWithNewLines);
+int       cstr_utf8_cont(const char c);
+int       cstr_utf8_bytes(const char *c);
+long long cstr_lenUtf8(const char* pcString, long long *pLen);
+long long cstr_len(const char* pcString);
+int       cstr_check_if_whitespace(const char cChar, int bWithNewLines);
 
 // External functions.
 
@@ -101,21 +104,23 @@ void csClear(cstr* pcsString);
 void csFree(cstr* pcsString);
 
 // String manipulation functions.
-void           csSet(cstr* pcsString, const char* pcString);
-void          csSetf(cstr* pcsString, const char* pcFormat, ...);
-void           csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
-long long    csInStr(const char* pcString, const char* pcFind);
-void           csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long llLength);
-long long    csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt);
-void          csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
-int          csInput(const char* pcMsg, cstr* pcsDest);
+void        csSet(cstr* pcsString, const char* pcString);
+void        csSetf(cstr* pcsString, const char* pcFormat, ...);
+void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
+long long   csInStr(const char *pcString, const char* pcFind);
+void        csMid(cstr* pcsDest, const char *pcSource, long long llOffset, long long llLength);
+long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char *pcString, const char *pcSplitAt);
+void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
+int         csInput(const char* pcMsg, cstr* pcsDest);
+void        csSanitize(cstr* pcsLbl);
+int         csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo);
 int         csIsUtf8(const char* pcString);
-int             csAt(char* pcChar, const char* pcString, long long llPos);
+int         csAt(char* pcChar, const char* pcString, long long llPos);
 int         csAtUtf8(char* pcChar, const char* pcString, long long llPos);
-cstr         ll2cstr(long long llValue);
-long long    cstr2ll(cstr csValue);
-cstr         ld2cstr(long double ldValue);
-long double  cstr2ld(cstr csValue);
+cstr        ll2cstr(long long llValue);
+long long   cstr2ll(cstr csValue);
+cstr        ld2cstr(long double ldValue);
+long double cstr2ld(cstr csValue);
 cstr        ll2csHex(long long llValue);
 long long   csHex2ll(cstr csValue);
 
@@ -171,7 +176,7 @@ void cstr_double_capacity_if_full(cstr* pcString, long long llSize) {
  * Name: cstr_utf8_cont
  *******************************************************************************/
 int cstr_utf8_cont(const char c) {
-    return (c & 0xc0) == 0x80;
+  return (c & 0xc0) == 0x80;
 }
 
 /*******************************************************************************
@@ -200,7 +205,7 @@ int cstr_utf8_bytes(const char* c) {
  *******************************************************************************/
 long long cstr_lenUtf8(const char* pcString, long long* pLen) {
   long long lenUtf8 = 0;
-        *pLen    = 0;
+           *pLen    = 0;
 
   // UTF char is counted if it not continues.
   while (pcString[*pLen] != '\0') {
@@ -479,8 +484,8 @@ void csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines) {
 
   // Complete csOut's information and don't forget the '0' byte!
   pcsOut->cStr[llLen] = 0;
-  pcsOut->len        = llLen;
-  pcsOut->size       = llLen + 1;
+  pcsOut->len         = llLen;
+  pcsOut->size        = llLen + 1;
 
   csFree(&csTmp);
 }
@@ -513,6 +518,56 @@ int csInput(const char* pcMsg, cstr* pcsDest) {
     acChar[0] = (char) iChar;
     csCat(pcsDest, pcsDest->cStr, acChar);
   }
+}
+
+//*******************************************************************************
+//* Name:  csSanitize
+//* Purpose: Deletes all non printable chars lower than 0x20.
+//*******************************************************************************
+void csSanitize(cstr* pcsLbl) {
+  cstr csTmp = csNew(pcsLbl->cStr);
+  int  iTmp  = 0;
+
+  // Save only sane chars in new string.
+  for (int i = 0; i < pcsLbl->len; ++i)
+    if ((unsigned char) pcsLbl->cStr[i] > 0x1f)
+      csTmp.cStr[iTmp++] = pcsLbl->cStr[i];
+
+  csSet(pcsLbl, csTmp.cStr);
+
+  csFree(&csTmp);
+}
+
+/*******************************************************************************
+ * Name:  csIconv
+ * Purpose: Runs lib version of echo 'str' | iconv -f from -t to".
+ *******************************************************************************/
+int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo) {
+  size_t  tLenFrom   = pcsFromStr->size;
+  size_t  tLenTo     = pcsFromStr->size * 2;
+  iconv_t tConverter = iconv_open(pcTo, pcFrom);
+
+  // Check if something is to do.
+  if (tLenFrom == 0) return 1;
+
+  // Create dynamically allocated and copy pointer.
+  char caBufFrom[tLenFrom]; char* cBufFrom = caBufFrom;
+  char caBufTo[tLenTo];     char* cBufTo   = caBufTo;
+
+  // Clear one buffer and copy string to the other.
+  for(size_t i = 0; i < tLenFrom; ++i) caBufFrom[i] = pcsFromStr->cStr[i];
+  for(size_t i = 0; i < tLenTo;   ++i) caBufTo[i]   = 0;
+
+  if (tConverter == (iconv_t) -1) return 0;
+
+  if (iconv(tConverter, &cBufFrom, &tLenFrom, &cBufTo, &tLenTo) == (size_t) -1)
+    return 0;
+
+  csSet(pcsToStr, caBufTo);
+
+  iconv_close(tConverter);
+
+  return 1;
 }
 
 /*******************************************************************************
