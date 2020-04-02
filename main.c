@@ -495,6 +495,8 @@ void initGlobalRegexes(void) {
  * Purpose: Free all global regex structs.
  *******************************************************************************/
 void freeRxStructs(void) {
+  rxFreeMatcher(&g_rx_c2Lbl);
+  rxFreeMatcher(&g_rx_c2Coords);
   rxFreeMatcher(&g_rx_c7TomTomLive);
 }
 
@@ -892,7 +894,9 @@ int main(int argc, char *argv[]) {
   }
 
   // Free all used memory, prior end of program.
+  csFree(&csErr);
   dacsFree(&g_tArgs);
+  freeRxStructs();
 
   return ERR_NOERR;
 }
