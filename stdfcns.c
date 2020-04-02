@@ -258,7 +258,7 @@ int isDigit(const char cDigit) {
  * Purpose: Checks datetime formats 'YYYY/MM/DD' and 'YYYY/MM/DD, hh:mm:ss'.
  *******************************************************************************/
 int checkDateTime(cstr* pcsDt) {
-  int iRv  = DT_NONE;
+  int iRv = DT_NONE;
 
   // Check short and long version lengths.
   if (pcsDt->len != 10 && pcsDt->len != 20) return iRv;
