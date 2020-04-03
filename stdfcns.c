@@ -30,7 +30,7 @@
 #define NUM_INT   0x01
 #define NUM_FLOAT 0x02
 
-// checkDateTime
+// checkDateTime()
 #define DT_NONE  0x00
 #define DT_SHORT 0x01
 #define DT_LONG  0x02
