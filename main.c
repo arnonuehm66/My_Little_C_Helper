@@ -848,13 +848,13 @@ int main(int argc, char *argv[]) {
   size_t sChunk = 0;
 
   // 1 GiB chunks with 1 KiB overlap.
+  t_data tData      = {0};
   size_t sChunkSize = 1024 * 1024 * 1024;
   size_t sTwice     = 1024;
 
   // Regex helper vars.
-  t_data tData = {0};
-  cstr   csErr = csNew("");
-  int    iErr  = 0;
+  cstr csErr = csNew("");
+  int  iErr  = 0;
 
   // Get options and dispatch errors, if any.
   getOptions(argc, argv);
