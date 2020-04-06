@@ -180,7 +180,7 @@ void dispatchError(int rv, const char* pcMsg);
  * Purpose: Opens a file or throws an error.
  *******************************************************************************/
 FILE* openFile(const char* pcName, const char* pcFlags) {
-  FILE* hFile;
+  FILE* hFile = NULL;
 
   if (!(hFile = fopen(pcName, pcFlags))) {
     cstr csMsg = csNew("");

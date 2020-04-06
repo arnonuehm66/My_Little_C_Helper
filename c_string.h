@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.13.1
+ ** Version: v0.14.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -42,6 +42,7 @@
  ** 06.10.2019  JE    Changed rv of csAtUtf8() and cstr_utf8_bytes to int.
  ** 20.03.2020  JE    Added csIconv() wrapping codepage converter library.
  ** 21.03.2020  JE    Added csSanitize().
+ ** 04.04.2020  JE    Changed internals of csInStr() to use strstr().
  *******************************************************************************/
 
 
@@ -56,6 +57,7 @@
 //* includes
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdarg.h>
 #include <iconv.h>
 
@@ -358,28 +360,22 @@ void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
 
 /*******************************************************************************
  * Name: csFind
- * Purpose: .
+ * Purpose: Finds offset of the first occurence of pcFind in pcString.
  *******************************************************************************/
 long long csInStr(const char* pcString, const char* pcFind) {
   cstr      csString = csNew(pcString);
   cstr      csFind   = csNew(pcFind);
-  long long llSearch = 0;
-  long long llFind   = 0;
   long long llPos    = -1;
+  char*     pcFound  = NULL;
 
-  if (csFind.len == 0)
-    return -1;
+  // Something to do?
+  if (csFind.len == 0 || csString.len == 0) return -1;
 
-  // Find last occurence of search-string.
-  for (llSearch = 0; llSearch < csString.len; ++llSearch) {
-    for (llFind = 0; llFind < csFind.len; ++llFind) {
-      if (csString.cStr[llSearch + llFind] != csFind.cStr[llFind])
-        break;
-    }
-    if (csFind.cStr[llFind] != '\0')
-      continue;
-    llPos = llSearch;
-  }
+  // Found something?
+  if ((pcFound = strstr(pcString, pcFind)) == NULL) return -1;
+
+  // Get offset from the difference between the two pointers.
+  llPos = (long long) (pcFound - pcString);
 
   csClear(&csString);
   csClear(&csFind);

@@ -47,6 +47,7 @@
  ** 31.03.2020  JE    Now use c_dynamic_array.h v0.4.1.
  ** 02.04.2020  JE    Added ability to read big files in chunks of 1GiB + 1KiB.
  ** 02.04.2020  JE    Added regex and converter functions.
+ ** 04.04.2020  JE    Now use c_string.h v0.14.1.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -60,7 +61,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 //#include "../../libs/c_string.h"
 //#include "../../libs/c_my_regex.h"
 //#include "../../libs/c_dynamic_arrays.h"
@@ -73,7 +73,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.44"
+#define ME_VERSION "0.0.45"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
