@@ -66,9 +66,9 @@ void version(void) {
 }
 
 /*******************************************************************************
-* Name: shift
-* Purpose: Shifts one argument from CLI and increments the counter.
-*******************************************************************************/
+ * Name: shift
+ * Purpose: Shifts one argument from CLI and increments the counter.
+ *******************************************************************************/
 void shift(cstr* pcsRv, int* pI, int argc, char* argv[]) {
    csSet(pcsRv, "");
    if (*pI < argc) csSet(pcsRv, argv[(*pI)++]);
