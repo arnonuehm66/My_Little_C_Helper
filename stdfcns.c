@@ -350,16 +350,16 @@ int checkDateTime(cstr* pcsDt) {
 
   // Short version.
   if (isDigit(pcsDt->cStr[0]) && isDigit(pcsDt->cStr[1]) &&
-    isDigit(pcsDt->cStr[2]) && isDigit(pcsDt->cStr[3]) &&
-    isDigit(pcsDt->cStr[5]) && isDigit(pcsDt->cStr[6]) &&
-    isDigit(pcsDt->cStr[8]) && isDigit(pcsDt->cStr[9]))
+      isDigit(pcsDt->cStr[2]) && isDigit(pcsDt->cStr[3]) &&
+      isDigit(pcsDt->cStr[5]) && isDigit(pcsDt->cStr[6]) &&
+      isDigit(pcsDt->cStr[8]) && isDigit(pcsDt->cStr[9]))
     iRv = DT_SHORT;
 
   // Long version.
   if (pcsDt->len == 20)
     if (isDigit(pcsDt->cStr[12]) && isDigit(pcsDt->cStr[13]) &&
-      isDigit(pcsDt->cStr[15]) && isDigit(pcsDt->cStr[16]) &&
-      isDigit(pcsDt->cStr[18]) && isDigit(pcsDt->cStr[19]))
+        isDigit(pcsDt->cStr[15]) && isDigit(pcsDt->cStr[16]) &&
+        isDigit(pcsDt->cStr[18]) && isDigit(pcsDt->cStr[19]))
       iRv = DT_LONG;
 
     return iRv;
