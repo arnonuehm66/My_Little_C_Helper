@@ -290,11 +290,11 @@ li getFileSize(FILE* hFile) {
 int toInt(char* pc4Bytes, int iCount) {
   t_char2Int tInt = {0};
   for (int i = 0; i < iCount; ++i)
-    #     if __BYTE_ORDER == __LITTLE_ENDIAN
+#if __BYTE_ORDER == __LITTLE_ENDIAN
     tInt.ac4Bytes[i] = pc4Bytes[i];
-  #     else
+#else
   tInt.ac4Bytes[i] = pc4Bytes[iCount - i - 1];
-  #     endif
+#endif
   return tInt.uint32;
 }
 
