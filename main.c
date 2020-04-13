@@ -48,6 +48,7 @@
  ** 02.04.2020  JE    Added ability to read big files in chunks of 1GiB + 1KiB.
  ** 02.04.2020  JE    Added regex and converter functions.
  ** 04.04.2020  JE    Now use c_string.h v0.14.1.
+ ** 12.04.2020  JE    Now use stdfcns.c v0.5.2.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -73,7 +74,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.45"
+#define ME_VERSION "0.0.46"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -256,10 +257,7 @@ void getOptions(int argc, char* argv[]) {
   int  iArg   = 1;  // Omit program name in arg loop.
   int  iChar  = 0;
   char cOpt   = 0;
-  int  iRv    = 0;
   int  iPos   = 0;
-  int  iErr   = 0;
-  int  iSign  = 0;
 
   // Set defaults.
   g_tOpts.iTestMode  = 0;
@@ -301,17 +299,13 @@ next_argument:
         continue;
       }
       if (!strcmp(csArgv.cStr, "--rx")) {
-        shift(&csRv, &iArg, argc, argv);
-        if (csRv.len == 0)
+        if (! getArgStr(&g_tOpts.csRx, &iArg, argc, argv, ARG_CLI, NULL))
           dispatchError(ERR_ARGS, "rx is missing");
-        csSet(&g_tOpts.csRx, csRv.cStr);
         continue;
       }
       if (!strcmp(csArgv.cStr, "--rxF")) {
-        shift(&csRv, &iArg, argc, argv);
-        if (csRv.len == 0)
+        if (! getArgStr(&g_tOpts.csRxF, &iArg, argc, argv, ARG_CLI, NULL))
           dispatchError(ERR_ARGS, "rxF is missing");
-        csSet(&g_tOpts.csRxF, csRv.cStr);
         continue;
       }
       dispatchError(ERR_ARGS, "Invalid long option");
@@ -337,48 +331,35 @@ next_argument:
         }
         // This version ...
         if (cOpt == 'x') {
-          shift(&csRv, &iArg, argc, argv);
-          if (csRv.len == 0 || isNumber(csRv, &iSign) != NUM_INT)
+          if (! getArgInt(&g_tOpts.iOptX, &iArg, argc, argv, ARG_CLI, NULL))
             dispatchError(ERR_ARGS, "No valid OptX or missing");
-          g_tOpts.iOptX = (int) cstr2ll(csRv);
           continue;
         }
         // ... or hex.
         if (cOpt == 'e') {
-          shift(&csRv, &iArg, argc, argv);
-          iRv = getHexIntParm(csRv, &iErr);
-          if (iErr)
+          if (! getArgHexInt(&g_tOpts.iOptX, &iArg, argc, argv, ARG_CLI, NULL))
             dispatchError(ERR_ARGS, "No valid OptX or missing");
-          g_tOpts.iOptX = iRv;
           continue;
         }
         // ... or that.
         if (cOpt == 'X') {
-          shift(&csRv, &iArg, argc, argv);
-          if (csRv.len == 0)
+          if (! getArgStr(&g_tOpts.csOptX, &iArg, argc, argv, ARG_CLI, NULL))
             dispatchError(ERR_ARGS, "OptX is missing");
-          csSet(&g_tOpts.csOptX, csRv.cStr);
           continue;
         }
         if (cOpt == 'y') {
-          shift(&csRv, &iArg, argc, argv);
-          if (csRv.len == 0 || isNumber(csRv, &iSign) != NUM_INT)
+          if (! getArgTime(&g_tOpts.tTicksMin, &iArg, argc, argv, ARG_CLI, NULL))
             dispatchError(ERR_ARGS, "Min year is missing");
-          g_tOpts.tTicksMin = (time_t) cstr2ll(csRv);
           continue;
         }
         if (cOpt == 'Y') {
-          shift(&csRv, &iArg, argc, argv);
-          if (csRv.len == 0 || isNumber(csRv, &iSign) != NUM_INT)
+          if (! getArgTime(&g_tOpts.tTicksMax, &iArg, argc, argv, ARG_CLI, NULL))
             dispatchError(ERR_ARGS, "Max year is missing");
-          g_tOpts.tTicksMax = (time_t) cstr2ll(csRv);
           continue;
         }
         if (cOpt == 'd') {
-          shift(&csRv, &iArg, argc, argv);
-          if (csRv.len == 0)
+          if (! getArgStr(&g_tOpts.csDateTime, &iArg, argc, argv, ARG_CLI, NULL))
             dispatchError(ERR_ARGS, "Date time missing");
-          csSet(&g_tOpts.csDateTime, csRv.cStr);
           continue;
         }
         dispatchError(ERR_ARGS, "Invalid short option");
@@ -390,10 +371,8 @@ next_argument:
     if (iPos > 0) {
       csSplit(&csOpt, &csRv, csArgv.cStr, "=");
       if (!strcmp(csOpt.cStr, "ox")) {
-        iRv = getHexIntParm(csRv, &iErr);
-        if (iErr)
+        if (! getArgHexInt(&g_tOpts.iOptX, NULL, 0, NULL, ARG_VALUE, csRv.cStr))
           dispatchError(ERR_ARGS, "No valid ox or missing");
-        g_tOpts.iOptX = iRv;
         continue;
       }
       dispatchError(ERR_ARGS, "Invalid equality option");
