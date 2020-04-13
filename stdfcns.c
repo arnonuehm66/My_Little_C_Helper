@@ -2,14 +2,16 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.3.1
+ ** Version: v0.5.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
  ** 30.11.2019  JE    Created file.
  ** 17.01.2020  JE    Added necessary includes to run with nodiff.
- ** 10.03.2020  JE    Added 'stdint.h' to use C99 conpatible uint32_t type.
+ ** 10.03.2020  JE    Added 'stdint.h' to use C99 compatible uint32_t type.
  ** 11.03.2020  JE    Added invInt(), isDigit() and checkDateTime();
+ ** 12.04.2020  JE    Added getArg*() function family.
+ ** 12.04.2020  JE    Deleted boolean constants.
  *******************************************************************************/
 
 
@@ -34,6 +36,10 @@
 #define DT_NONE  0x00
 #define DT_SHORT 0x01
 #define DT_LONG  0x02
+
+// getArg*()
+#define ARG_VALUE 0x00
+#define ARG_CLI   0x01
 
 
 //******************************************************************************
@@ -70,8 +76,8 @@ void version(void) {
  * Purpose: Shifts one argument from CLI and increments the counter.
  *******************************************************************************/
 void shift(cstr* pcsRv, int* pI, int argc, char* argv[]) {
-   csSet(pcsRv, "");
-   if (*pI < argc) csSet(pcsRv, argv[(*pI)++]);
+  csSet(pcsRv, "");
+  if (*pI < argc) csSet(pcsRv, argv[(*pI)++]);
 }
 
 /*******************************************************************************
@@ -176,6 +182,79 @@ int getHexIntParm(cstr csParm, int* piErr) {
 void dispatchError(int rv, const char* pcMsg);
 
 /*******************************************************************************
+ * Name:  getArgStr
+ * Purpose: Reads a string from cli or a value and returns it.
+ *******************************************************************************/
+int getArgStr(cstr* pcsRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
+  if (bShift == ARG_CLI)   shift(pcsRv, piArg, argc, argv);
+  if (bShift == ARG_VALUE) csSet(pcsRv, pcVal);
+
+  if (pcsRv->len == 0) return 0;
+
+  return 1;
+}
+
+/*******************************************************************************
+ * Name:  getArgHexInt
+ * Purpose: Reads an hex integer from cli or a value and returns it.
+ *******************************************************************************/
+int getArgHexInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
+  cstr csRv = csNew("");
+  int  iErr = 0;
+
+  if (bShift == ARG_CLI)   shift(&csRv, piArg, argc, argv);
+  if (bShift == ARG_VALUE) csSet(&csRv, pcVal);
+
+  if (csRv.len == 0) return 0;
+
+  *piRv = getHexIntParm(csRv, &iErr);
+  if (iErr == 1) return 0;
+
+  csFree(&csRv);
+  return 1;
+}
+
+/*******************************************************************************
+ * Name:  getArgInt
+ * Purpose: Reads an integer from cli or a value and returns it.
+ *******************************************************************************/
+int getArgInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
+  cstr csRv  = csNew("");
+  int  bSign = 0;
+
+  if (bShift == ARG_CLI)   shift(&csRv, piArg, argc, argv);
+  if (bShift == ARG_VALUE) csSet(&csRv, pcVal);
+
+  if (csRv.len  == 0)                    return 0;
+  if (isNumber(csRv, &bSign) != NUM_INT) return 0;
+
+  *piRv = (int) cstr2ll(csRv);
+
+  csFree(&csRv);
+  return 1;
+}
+
+/*******************************************************************************
+ * Name:  getArgTime
+ * Purpose: Reads an time_t from cli or a value and returns it.
+ *******************************************************************************/
+int getArgTime(time_t* ptRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
+  cstr csRv  = csNew("");
+  int  bSign = 0;
+
+  if (bShift == ARG_CLI)   shift(&csRv, piArg, argc, argv);
+  if (bShift == ARG_VALUE) csSet(&csRv, pcVal);
+
+  if (csRv.len  == 0)                    return 0;
+  if (isNumber(csRv, &bSign) != NUM_INT) return 0;
+
+  *ptRv = (time_t) cstr2ll(csRv);
+
+  csFree(&csRv);
+  return 1;
+}
+
+/*******************************************************************************
  * Name:  openFile
  * Purpose: Opens a file or throws an error.
  *******************************************************************************/
@@ -210,12 +289,12 @@ li getFileSize(FILE* hFile) {
  *******************************************************************************/
 int toInt(char* pc4Bytes, int iCount) {
   t_char2Int tInt = {0};
-    for (int i = 0; i < iCount; ++i)
-#     if __BYTE_ORDER == __LITTLE_ENDIAN
-        tInt.ac4Bytes[i] = pc4Bytes[i];
-#     else
-        tInt.ac4Bytes[i] = pc4Bytes[iCount - i - 1];
-#     endif
+  for (int i = 0; i < iCount; ++i)
+    #     if __BYTE_ORDER == __LITTLE_ENDIAN
+    tInt.ac4Bytes[i] = pc4Bytes[i];
+  #     else
+  tInt.ac4Bytes[i] = pc4Bytes[iCount - i - 1];
+  #     endif
   return tInt.uint32;
 }
 
@@ -271,19 +350,19 @@ int checkDateTime(cstr* pcsDt) {
 
   // Short version.
   if (isDigit(pcsDt->cStr[0]) && isDigit(pcsDt->cStr[1]) &&
-      isDigit(pcsDt->cStr[2]) && isDigit(pcsDt->cStr[3]) &&
-      isDigit(pcsDt->cStr[5]) && isDigit(pcsDt->cStr[6]) &&
-      isDigit(pcsDt->cStr[8]) && isDigit(pcsDt->cStr[9]))
+    isDigit(pcsDt->cStr[2]) && isDigit(pcsDt->cStr[3]) &&
+    isDigit(pcsDt->cStr[5]) && isDigit(pcsDt->cStr[6]) &&
+    isDigit(pcsDt->cStr[8]) && isDigit(pcsDt->cStr[9]))
     iRv = DT_SHORT;
 
   // Long version.
   if (pcsDt->len == 20)
     if (isDigit(pcsDt->cStr[12]) && isDigit(pcsDt->cStr[13]) &&
-        isDigit(pcsDt->cStr[15]) && isDigit(pcsDt->cStr[16]) &&
-        isDigit(pcsDt->cStr[18]) && isDigit(pcsDt->cStr[19]))
+      isDigit(pcsDt->cStr[15]) && isDigit(pcsDt->cStr[16]) &&
+      isDigit(pcsDt->cStr[18]) && isDigit(pcsDt->cStr[19]))
       iRv = DT_LONG;
 
-  return iRv;
+    return iRv;
 }
 
 /*******************************************************************************
