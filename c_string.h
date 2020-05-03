@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.14.1
+ ** Version: v0.14.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -43,6 +43,7 @@
  ** 20.03.2020  JE    Added csIconv() wrapping codepage converter library.
  ** 21.03.2020  JE    Added csSanitize().
  ** 04.04.2020  JE    Changed internals of csInStr() to use strstr().
+ ** 29.04.2020  JE    Fixed comments. Fixed csSanitize() '\0' bug.
  *******************************************************************************/
 
 
@@ -86,7 +87,7 @@ typedef struct s_cstr {
 
 //******************************************************************************
 //* function forward declarations
-//* Makes for a better function's arrangement.
+//* For a better function's arrangement.
 
 // Internal functions.
 void      cstr_init(cstr* pcString);
@@ -250,10 +251,10 @@ int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
 
 /*******************************************************************************
  * Name: csNew
- * Purpose: .
+ * Purpose: Creates a new cstr object with default parameters + adds a string.
  *******************************************************************************/
 cstr csNew(const char* pcString) {
-  cstr      csOut  = {0};
+  cstr      csOut   = {0};
   long long llClen  = 0;
   long long llUlen  = cstr_lenUtf8(pcString, &llClen);
   long long llCsize = 0;
@@ -279,7 +280,7 @@ cstr csNew(const char* pcString) {
 
 /*******************************************************************************
  * Name: csClear
- * Purpose: .
+ * Purpose: Clears old cstr object and initializes it to an empty one.
  *******************************************************************************/
 void csClear(cstr* pcsString) {
   cstr_init(pcsString);
@@ -287,7 +288,7 @@ void csClear(cstr* pcsString) {
 
 /*******************************************************************************
  * Name: csFree
- * Purpose: .
+ * Purpose: Deletes cstr object and frees memory used.
  *******************************************************************************/
 void csFree(cstr* pcsString) {
   if (pcsString->cStr != NULL) free(pcsString->cStr);
@@ -304,6 +305,7 @@ void csFree(cstr* pcsString) {
 
 /*******************************************************************************
  * Name: csSet
+ * Purpose: Inserts a new string in cstr object, deletes old one.
  *******************************************************************************/
 void csSet(cstr* pcsString, const char* pcString) {
   // Watch out, 'pcString' could be a pointer from 'pcsString.cStr'!
@@ -315,6 +317,7 @@ void csSet(cstr* pcsString, const char* pcString) {
 
 /*******************************************************************************
  * Name: csSetf
+ * Purpose: Sets new string in cstr object like sprintf() .
  *******************************************************************************/
 void csSetf(cstr* pcsString, const char* pcFormat, ...) {
   va_list args1;    // Needs two dynamic args pointer because after first use
@@ -336,7 +339,7 @@ void csSetf(cstr* pcsString, const char* pcFormat, ...) {
 
 /*******************************************************************************
  * Name: csCat
- * Purpose: .
+ * Purpose: Concatenates two strings to one cstr object.
  *******************************************************************************/
 void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
   cstr csOut = csNew(pcSource);
@@ -385,7 +388,8 @@ long long csInStr(const char* pcString, const char* pcFind) {
 
 /*******************************************************************************
  * Name: csMid
- * Purpose: .
+ * Purpose: Mimics BASIC's MID$(). Added negative offsets and rest of string.
+ *          Negative offsets counts from right, negative length, gives rest.
  *******************************************************************************/
 void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long llLength) {
   cstr csSource = csNew(pcSource);
@@ -488,7 +492,7 @@ void csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines) {
 
 /*******************************************************************************
  * Name:  csInput
- * Purpose: Kind of a getline() from stdin to a cstr var.
+ * Purpose: Kind of a getline() from stdin into a cstr object.
  *******************************************************************************/
 int csInput(const char* pcMsg, cstr* pcsDest) {
   int  iChar     = 0;
@@ -504,11 +508,11 @@ int csInput(const char* pcMsg, cstr* pcsDest) {
     // Error condition of getchar().
     if (iChar == EOF) {
       csSet(pcsDest, "");
-      return 1;
+      return 0;
     }
 
     // Take care of the '\n'.
-    if ((char) iChar == '\n') return 0;
+    if ((char) iChar == '\n') return 1;
 
     // Create a minute string of one char.
     acChar[0] = (char) iChar;
@@ -529,6 +533,9 @@ void csSanitize(cstr* pcsLbl) {
     if ((unsigned char) pcsLbl->cStr[i] > 0x1f)
       csTmp.cStr[iTmp++] = pcsLbl->cStr[i];
 
+  // Set to '\0' after last char, to end string.
+  csTmp.cStr[iTmp] = 0x00;
+
   csSet(pcsLbl, csTmp.cStr);
 
   csFree(&csTmp);
@@ -540,13 +547,13 @@ void csSanitize(cstr* pcsLbl) {
  *******************************************************************************/
 int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo) {
   size_t  tLenFrom   = pcsFromStr->size;
-  size_t  tLenTo     = pcsFromStr->size * 2;
+  size_t  tLenTo     = pcsFromStr->size * 2; // Worst case is * 4!
   iconv_t tConverter = iconv_open(pcTo, pcFrom);
 
   // Check if something is to do.
   if (tLenFrom == 0) return 1;
 
-  // Create dynamically allocated and copy pointer.
+  // Create dynamically allocated vars and copy their pointers for iconv().
   char caBufFrom[tLenFrom]; char* cBufFrom = caBufFrom;
   char caBufTo[tLenTo];     char* cBufTo   = caBufTo;
 
@@ -580,7 +587,7 @@ int csIsUtf8(const char* pcString) {
 
 /*******************************************************************************
  * Name:  csAt
- * Purpose: Returns byte at given offset and length of found char (1 or 0).
+ * Purpose: Returns byte at given offset and length of found char (0 or 1).
  *******************************************************************************/
 int csAt(char* pcChar, const char* pcString, long long llPos) {
   long long len = cstr_len(pcString);

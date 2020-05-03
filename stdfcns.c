@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.5.2
+ ** Version: v0.6.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -12,6 +12,7 @@
  ** 11.03.2020  JE    Added invInt(), isDigit() and checkDateTime();
  ** 12.04.2020  JE    Added getArg*() function family.
  ** 12.04.2020  JE    Deleted boolean constants.
+ ** 15.04.2020  JE    Changed getHexIntParm to getHexLongParm().
  *******************************************************************************/
 
 
@@ -119,18 +120,18 @@ int isNumber(cstr sString, int* piSign) {
 }
 
 /*******************************************************************************
- * Name:  getHexIntParm
+ * Name:  getHexLongParm
  * Purpose: Converts parameter entered as hexadecimal with '0x' prefix or as
  *          decimal with postfix K, M, G (meaning Kilo- Mega- and Giga-bytes
  *          based on 1024).
  *******************************************************************************/
-int getHexIntParm(cstr csParm, int* piErr) {
+ll getHexLongParm(cstr csParm, int* piErr) {
   cstr csPre  = csNew("");
   cstr csPost = csNew("");
   int  fHex   = 0;
   int  iPost  = 1;
   int  iSign  = 0;
-  int  iVal   = 0;
+  ll   llVal  = 0;
 
   *piErr = 0;
 
@@ -157,9 +158,9 @@ int getHexIntParm(cstr csParm, int* piErr) {
 
   // Hex or integer
   if (fHex == 1)
-    iVal = (int) csHex2ll(csParm);
+    llVal = csHex2ll(csParm);
   else
-    iVal = ((int) cstr2ll(csParm)) * iPost;
+    llVal = cstr2ll(csParm) * iPost;
 
   // Remove postfix to use isNumber().
   if (iPost > 1) csMid(&csParm, csParm.cStr, 0, csParm.len - 1);
@@ -172,14 +173,8 @@ int getHexIntParm(cstr csParm, int* piErr) {
   csFree(&csPre);
   csFree(&csPost);
 
-  return iVal;
+  return llVal;
 }
-
-/*******************************************************************************
- * Name:  dispatchError
- * Purpose: Needed as a forward declaration for 'openFile()' to work properly!
- *******************************************************************************/
-void dispatchError(int rv, const char* pcMsg);
 
 /*******************************************************************************
  * Name:  getArgStr
@@ -195,10 +190,10 @@ int getArgStr(cstr* pcsRv, int* piArg, int argc, char** argv, int bShift, const 
 }
 
 /*******************************************************************************
- * Name:  getArgHexInt
+ * Name:  getArgHexLong
  * Purpose: Reads an hex integer from cli or a value and returns it.
  *******************************************************************************/
-int getArgHexInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
+int getArgHexLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
   cstr csRv = csNew("");
   int  iErr = 0;
 
@@ -207,7 +202,7 @@ int getArgHexInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const
 
   if (csRv.len == 0) return 0;
 
-  *piRv = getHexIntParm(csRv, &iErr);
+  *pllRv = getHexLongParm(csRv, &iErr);
   if (iErr == 1) return 0;
 
   csFree(&csRv);
@@ -218,7 +213,7 @@ int getArgHexInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const
  * Name:  getArgInt
  * Purpose: Reads an integer from cli or a value and returns it.
  *******************************************************************************/
-int getArgInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
+int getArgLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
   cstr csRv  = csNew("");
   int  bSign = 0;
 
@@ -228,7 +223,7 @@ int getArgInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const ch
   if (csRv.len  == 0)                    return 0;
   if (isNumber(csRv, &bSign) != NUM_INT) return 0;
 
-  *piRv = (int) cstr2ll(csRv);
+  *pllRv = cstr2ll(csRv);
 
   csFree(&csRv);
   return 1;
@@ -253,6 +248,12 @@ int getArgTime(time_t* ptRv, int* piArg, int argc, char** argv, int bShift, cons
   csFree(&csRv);
   return 1;
 }
+
+/*******************************************************************************
+ * Name:  dispatchError
+ * Purpose: Needed as a forward declaration for 'openFile()' to work properly!
+ *******************************************************************************/
+void dispatchError(int rv, const char* pcMsg);
 
 /*******************************************************************************
  * Name:  openFile
@@ -289,18 +290,18 @@ li getFileSize(FILE* hFile) {
  *******************************************************************************/
 int toInt(char* pc4Bytes, int iCount) {
   t_char2Int tInt = {0};
-  for (int i = 0; i < iCount; ++i)
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-    tInt.ac4Bytes[i] = pc4Bytes[i];
-#else
-  tInt.ac4Bytes[i] = pc4Bytes[iCount - i - 1];
-#endif
+    for (int i = 0; i < iCount; ++i)
+#     if __BYTE_ORDER == __LITTLE_ENDIAN
+        tInt.ac4Bytes[i] = pc4Bytes[i];
+#     else
+        tInt.ac4Bytes[i] = pc4Bytes[iCount - i - 1];
+#     endif
   return tInt.uint32;
 }
 
 /*******************************************************************************
  * Name:  invInt
- * Purpose: Revers byte order to little-endian.
+ * Purpose: Revers byte order.
  *******************************************************************************/
 uint32_t invInt(uint32_t uiTicks) {
   t_char2Int uTicks    = {0};
@@ -362,7 +363,7 @@ int checkDateTime(cstr* pcsDt) {
         isDigit(pcsDt->cStr[18]) && isDigit(pcsDt->cStr[19]))
       iRv = DT_LONG;
 
-    return iRv;
+  return iRv;
 }
 
 /*******************************************************************************

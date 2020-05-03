@@ -49,6 +49,7 @@
  ** 02.04.2020  JE    Added regex and converter functions.
  ** 04.04.2020  JE    Now use c_string.h v0.14.1.
  ** 12.04.2020  JE    Now use stdfcns.c v0.5.2.
+ ** 15.04.2020  JE    Now use stdfcns.c v0.6.1.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -74,7 +75,7 @@
 //* defines & macros
 
 #define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.46"
+#define ME_VERSION "0.0.47"
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -153,7 +154,7 @@ char* g_cType[] = {
                   };
 
 t_rx_matcher g_rx_c2Lbl        = {0};
-t_rx_matcher g_rx_c2Coords    = {0};
+t_rx_matcher g_rx_c2Coords     = {0};
 t_rx_matcher g_rx_c7TomTomLive = {0};
 
 t_entry g_tE;
@@ -331,13 +332,13 @@ next_argument:
         }
         // This version ...
         if (cOpt == 'x') {
-          if (! getArgInt(&g_tOpts.iOptX, &iArg, argc, argv, ARG_CLI, NULL))
+          if (! getArgLong((ll*) &g_tOpts.iOptX, &iArg, argc, argv, ARG_CLI, NULL))
             dispatchError(ERR_ARGS, "No valid OptX or missing");
           continue;
         }
         // ... or hex.
         if (cOpt == 'e') {
-          if (! getArgHexInt(&g_tOpts.iOptX, &iArg, argc, argv, ARG_CLI, NULL))
+          if (! getArgHexLong((ll*) &g_tOpts.iOptX, &iArg, argc, argv, ARG_CLI, NULL))
             dispatchError(ERR_ARGS, "No valid OptX or missing");
           continue;
         }
@@ -371,7 +372,7 @@ next_argument:
     if (iPos > 0) {
       csSplit(&csOpt, &csRv, csArgv.cStr, "=");
       if (!strcmp(csOpt.cStr, "ox")) {
-        if (! getArgHexInt(&g_tOpts.iOptX, NULL, 0, NULL, ARG_VALUE, csRv.cStr))
+        if (! getArgHexLong((ll*) &g_tOpts.iOptX, NULL, 0, NULL, ARG_VALUE, csRv.cStr))
           dispatchError(ERR_ARGS, "No valid ox or missing");
         continue;
       }
