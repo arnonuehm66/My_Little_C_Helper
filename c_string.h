@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.14.2
+ ** Version: v0.16.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -44,6 +44,11 @@
  ** 21.03.2020  JE    Added csSanitize().
  ** 04.04.2020  JE    Changed internals of csInStr() to use strstr().
  ** 29.04.2020  JE    Fixed comments. Fixed csSanitize() '\0' bug.
+ ** 04.06.2020  JE    Added llPos in csInStr() to set start offset prior search.
+ **                   Adjusted csSplit() accordingly.
+ ** 04.06.2020  JE    Added csSplitPos() to split at given offset.
+ ** 04.06.2020  JE    Simplified csInStr();
+ ** 01.07.2020  JE    Added '#include <string.h>' for strcmp().
  *******************************************************************************/
 
 
@@ -110,9 +115,10 @@ void csFree(cstr* pcsString);
 void        csSet(cstr* pcsString, const char* pcString);
 void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
-long long   csInStr(const char *pcString, const char* pcFind);
+long long   csInStr(long long llPos, const char* pcString, const char* pcFind);
 void        csMid(cstr* pcsDest, const char *pcSource, long long llOffset, long long llLength);
 long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char *pcString, const char *pcSplitAt);
+int         csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcString, long long llWidth);
 void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
 int         csInput(const char* pcMsg, cstr* pcsDest);
 void        csSanitize(cstr* pcsLbl);
@@ -362,28 +368,26 @@ void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
 }
 
 /*******************************************************************************
- * Name: csFind
+ * Name: csInStr
  * Purpose: Finds offset of the first occurence of pcFind in pcString.
  *******************************************************************************/
-long long csInStr(const char* pcString, const char* pcFind) {
-  cstr      csString = csNew(pcString);
-  cstr      csFind   = csNew(pcFind);
-  long long llPos    = -1;
-  char*     pcFound  = NULL;
+long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
+  long long llStrLen  = cstr_len(pcString);
+  long long llFindLen = cstr_len(pcFind);
+  long long i         = 0;   // Offset in String.
+  long long c         = 0;   // Offset in Find.
 
-  // Something to do?
-  if (csFind.len == 0 || csString.len == 0) return -1;
+  // Sanity checks.
+  if (llPos < 0 || llPos > llStrLen || llStrLen == 0 || llFindLen == 0) return -1;
 
-  // Found something?
-  if ((pcFound = strstr(pcString, pcFind)) == NULL) return -1;
+  for (i = llPos; i < llStrLen; ++i)
+    if (pcFind[c++] == pcString[i]) {
+      if (c == llFindLen) return i - c + 1;
+    }
+    else
+      c = 0;
 
-  // Get offset from the difference between the two pointers.
-  llPos = (long long) (pcFound - pcString);
-
-  csClear(&csString);
-  csClear(&csFind);
-
-  return llPos;
+  return -1;
 }
 
 /*******************************************************************************
@@ -437,7 +441,7 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
  * Purpose: Splits a cstr string at first occurence of 'pcSplitAt'.
  *******************************************************************************/
 long long csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt) {
-  long long llPos   = csInStr(pcString, pcSplitAt);
+  long long llPos   = csInStr(0, pcString, pcSplitAt);
   long long llWidth = cstr_len(pcSplitAt);
 
   // Split, if found.
@@ -448,6 +452,21 @@ long long csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const cha
 
   // Return, where the split occured.
   return llPos;
+}
+
+/*******************************************************************************
+ * Name:  csSplitPos
+ * Purpose: Splits a cstr string at given offset and given width.
+ *******************************************************************************/
+int csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcString, long long llWidth) {
+  long long llStringLen = cstr_len(pcString);
+
+  if (llPos >= 0 && llPos <= llStringLen && llWidth >= 0 && llWidth <= llStringLen) {
+    csMid(pcsLeft,  pcString,               0, llPos);
+    csMid(pcsRight, pcString, llPos + llWidth,    -1);
+    return 0;
+  }
+  return 1;
 }
 
 /*******************************************************************************

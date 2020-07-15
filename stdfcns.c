@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.6.1
+ ** Version: v0.6.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -13,6 +13,7 @@
  ** 12.04.2020  JE    Added getArg*() function family.
  ** 12.04.2020  JE    Deleted boolean constants.
  ** 15.04.2020  JE    Changed getHexIntParm to getHexLongParm().
+ ** 13.07.2020  JE    Changed 'ARG_VALUE' to 'ARG_VAL'.
  *******************************************************************************/
 
 
@@ -39,8 +40,8 @@
 #define DT_LONG  0x02
 
 // getArg*()
-#define ARG_VALUE 0x00
-#define ARG_CLI   0x01
+#define ARG_VAL 0x00
+#define ARG_CLI 0x01
 
 
 //******************************************************************************
@@ -182,7 +183,7 @@ ll getHexLongParm(cstr csParm, int* piErr) {
  *******************************************************************************/
 int getArgStr(cstr* pcsRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
   if (bShift == ARG_CLI)   shift(pcsRv, piArg, argc, argv);
-  if (bShift == ARG_VALUE) csSet(pcsRv, pcVal);
+  if (bShift == ARG_VAL) csSet(pcsRv, pcVal);
 
   if (pcsRv->len == 0) return 0;
 
@@ -198,7 +199,7 @@ int getArgHexLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, cons
   int  iErr = 0;
 
   if (bShift == ARG_CLI)   shift(&csRv, piArg, argc, argv);
-  if (bShift == ARG_VALUE) csSet(&csRv, pcVal);
+  if (bShift == ARG_VAL) csSet(&csRv, pcVal);
 
   if (csRv.len == 0) return 0;
 
@@ -217,8 +218,8 @@ int getArgLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, const c
   cstr csRv  = csNew("");
   int  bSign = 0;
 
-  if (bShift == ARG_CLI)   shift(&csRv, piArg, argc, argv);
-  if (bShift == ARG_VALUE) csSet(&csRv, pcVal);
+  if (bShift == ARG_CLI) shift(&csRv, piArg, argc, argv);
+  if (bShift == ARG_VAL) csSet(&csRv, pcVal);
 
   if (csRv.len  == 0)                    return 0;
   if (isNumber(csRv, &bSign) != NUM_INT) return 0;
@@ -237,8 +238,8 @@ int getArgTime(time_t* ptRv, int* piArg, int argc, char** argv, int bShift, cons
   cstr csRv  = csNew("");
   int  bSign = 0;
 
-  if (bShift == ARG_CLI)   shift(&csRv, piArg, argc, argv);
-  if (bShift == ARG_VALUE) csSet(&csRv, pcVal);
+  if (bShift == ARG_CLI) shift(&csRv, piArg, argc, argv);
+  if (bShift == ARG_VAL) csSet(&csRv, pcVal);
 
   if (csRv.len  == 0)                    return 0;
   if (isNumber(csRv, &bSign) != NUM_INT) return 0;
@@ -300,18 +301,18 @@ int toInt(char* pc4Bytes, int iCount) {
 }
 
 /*******************************************************************************
- * Name:  invInt
- * Purpose: Revers byte order.
+ * Name:  revInt32
+ * Purpose: Revers byte order of an 32 bit integer.
  *******************************************************************************/
-uint32_t invInt(uint32_t uiTicks) {
-  t_char2Int uTicks    = {0};
-  t_char2Int uInvTicks = {0};
+uint32_t revInt32(uint32_t ui32Int) {
+  t_char2Int tc2iInt    = {0};
+  t_char2Int tc2iRevInt = {0};
 
   // Invert bytes in uTicks.
-  uTicks.uint32 = uiTicks;
-  for (int i = 0; i < 4; ++i) uInvTicks.ac4Bytes[i] = uTicks.ac4Bytes[3 - i];
+  tc2iInt.uint32 = ui32Int;
+  for (int i = 0; i < 4; ++i) tc2iRevInt.ac4Bytes[i] = tc2iInt.ac4Bytes[3 - i];
 
-  return uInvTicks.uint32;
+  return tc2iRevInt.uint32;
 }
 
 /*******************************************************************************

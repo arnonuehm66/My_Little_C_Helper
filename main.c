@@ -368,11 +368,11 @@ next_argument:
       goto next_argument;
     }
     // Equality options:
-    iPos = csInStr(csArgv.cStr, "=");
+    iPos = csInStr(0, csArgv.cStr, "=");
     if (iPos > 0) {
       csSplit(&csOpt, &csRv, csArgv.cStr, "=");
       if (!strcmp(csOpt.cStr, "ox")) {
-        if (! getArgHexLong((ll*) &g_tOpts.iOptX, NULL, 0, NULL, ARG_VALUE, csRv.cStr))
+        if (! getArgHexLong((ll*) &g_tOpts.iOptX, NULL, 0, NULL, ARG_VAL, csRv.cStr))
           dispatchError(ERR_ARGS, "No valid ox or missing");
         continue;
       }
