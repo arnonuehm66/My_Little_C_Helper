@@ -50,6 +50,7 @@
  ** 04.04.2020  JE    Now use c_string.h v0.14.1.
  ** 12.04.2020  JE    Now use stdfcns.c v0.5.2.
  ** 15.04.2020  JE    Now use stdfcns.c v0.6.1.
+ ** 05.08.2020  JE    Now use stdfcns.c v0.7.1 and g_csMename.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -74,8 +75,8 @@
 //******************************************************************************
 //* defines & macros
 
-#define ME_NAME    "skeleton_main.c"
-#define ME_VERSION "0.0.47"
+#define ME_VERSION "0.0.48"
+cstr g_csMename;
 
 #define ERR_NOERR 0x00
 #define ERR_ARGS  0x01
@@ -178,28 +179,30 @@ void usage(int iErr, const char* pcMsg) {
   if (csMsg.len != 0)
     csCat(&csMsg, csMsg.cStr, "\n\n");
 
-  csCat(&csMsg, csMsg.cStr,
+  csSetf(&csMsg, "%s"
 //|************************ 80 chars width ****************************************|
-  "usage: " ME_NAME " [-t] [-o] [-x n] [-X <str> [--rx <regex>] [--rxF <flags>]] [-e hex] [ox=hex] [-y yyyy [-Y yyyy]] file1 [file2 ...]\n"
-  "       " ME_NAME " [-h|--help|-v|--version]\n"
-  " What the programm should do.\n"
-  " '-e' and 'ox=' can be entered as hexadecimal with '0x' prefix or as decimal\n"
-  " with postfix K, M, G (meaning Kilo- Mega- and Giga-bytes based on 1024).\n"
-  "  -t:            don't execute printed commands (default execute)\n"
-  "  -o:            print additional offset column\n"
-  "  -x n:          this is an option eating n\n"
-  "  -X <str>:      this is an option eating a string\n"
-  "  --rx <regex>:  gives an regex to match string provided by '-X'\n"
-  "  --rxF <flags>: flags with wich regex will be compiled (i.e. 'xims')\n"
-  "  -e hex:        this is an hex/dec option eating a hex/dec string\n"
-  "  ox=hex:        this is an hex/dec option eating a hex/dec string\n"
-  "  -y yyyy:       min year to consider a track as valid (default 2002)\n"
-  "  -Y yyyy:       max year to consider a track as valid (default to 'now')\n"
-  "  -d 'yyyy/mm/dd, hh:mm:ss':\n"
-  "                 convert string to ticks and back to string for testing\n"
-  "  -h|--help:     print this help\n"
-  "  -v|--version:  print version of program\n"
+   "usage: %s [-t] [-o] [-x n] [-X <str> [--rx <regex>] [--rxF <flags>]] [-e hex] [ox=hex] [-y yyyy [-Y yyyy]] file1 [file2 ...]\n"
+   "       %s [-h|--help|-v|--version]\n"
+   " What the programm should do.\n"
+   " '-e' and 'ox=' can be entered as hexadecimal with '0x' prefix or as decimal\n"
+   " with postfix K, M, G (meaning Kilo- Mega- and Giga-bytes based on 1024).\n"
+   "  -t:            don't execute printed commands (default execute)\n"
+   "  -o:            print additional offset column\n"
+   "  -x n:          this is an option eating n\n"
+   "  -X <str>:      this is an option eating a string\n"
+   "  --rx <regex>:  gives an regex to match string provided by '-X'\n"
+   "  --rxF <flags>: flags with wich regex will be compiled (i.e. 'xims')\n"
+   "  -e hex:        this is an hex/dec option eating a hex/dec string\n"
+   "  ox=hex:        this is an hex/dec option eating a hex/dec string\n"
+   "  -y yyyy:       min year to consider a track as valid (default 2002)\n"
+   "  -Y yyyy:       max year to consider a track as valid (default to 'now')\n"
+   "  -d 'yyyy/mm/dd, hh:mm:ss':\n"
+   "                 convert string to ticks and back to string for testing\n"
+   "  -h|--help:     print this help\n"
+   "  -v|--version:  print version of program\n"
 //|************************ 80 chars width ****************************************|
+         ,csMsg.cStr,
+         g_csMename.cStr, g_csMename.cStr
         );
 
   if (iErr == ERR_NOERR)
@@ -239,12 +242,12 @@ void dispatchError(int rv, const char* pcMsg) {
  * Purpose: Inits entry's struct to 'zero'.
  *******************************************************************************/
 void initEntry() {
-  g_tE.iType         = 0;
+  g_tE.iType        = 0;
   g_tE.tcLon.ldlVal = 0.0;
   g_tE.tcLon.csVal  = csNew("-");
   g_tE.tcLat.ldlVal = 0.0;
   g_tE.tcLat.csVal  = csNew("-");
-  g_tE.csLbl         = csNew("");
+  g_tE.csLbl        = csNew("");
 }
 
 /*******************************************************************************
@@ -836,11 +839,14 @@ int main(int argc, char *argv[]) {
   cstr csErr = csNew("");
   int  iErr  = 0;
 
+  // Save program's name.
+  g_csMename = csNew("");
+  getMename(&g_csMename, argv[0]);
+
   // Get options and dispatch errors, if any.
   getOptions(argc, argv);
 
   initGlobalRegexes();
-
   initTimeFunctions();
 
   debug();  // Delete, when debugging is finished.

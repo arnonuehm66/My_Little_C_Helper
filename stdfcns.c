@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.6.2
+ ** Version: v0.7.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -14,6 +14,7 @@
  ** 12.04.2020  JE    Deleted boolean constants.
  ** 15.04.2020  JE    Changed getHexIntParm to getHexLongParm().
  ** 13.07.2020  JE    Changed 'ARG_VALUE' to 'ARG_VAL'.
+ ** 05.08.2020  JE    Added getMename().
  *******************************************************************************/
 
 
@@ -69,8 +70,34 @@ typedef union u_char2Int{
  * Purpose: Print version and exit program.
  *******************************************************************************/
 void version(void) {
-  printf("%s v%s\n", ME_NAME, ME_VERSION);
+  printf("%s v%s\n", g_csMename.cStr, ME_VERSION);
   exit(ERR_NOERR);
+}
+
+/*******************************************************************************
+ * Name:  getMename
+ * Purpose: Get the name with which the programm was started.
+ *******************************************************************************/
+void getMename(cstr* pcsMename, const char* argv0) {
+  ll   llPos     =  0;
+  ll   llLastPos = -1;
+  cstr csRest    = csNew("");
+  cstr csName    = csNew("");
+
+  // Get last '/' if any.
+  while ((llPos = csInStr(llPos, argv0, "/")) > -1) {
+    llLastPos = llPos;
+    ++llPos;
+  }
+
+  // Split at that '/' or get full string.
+  if (llLastPos > -1) {
+    csSplitPos(llLastPos, &csRest, &csName, argv0, 1);
+    csSet(pcsMename, csName.cStr);
+  }
+  else {
+    csSet(pcsMename, argv0);
+  }
 }
 
 /*******************************************************************************
