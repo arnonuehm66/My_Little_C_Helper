@@ -238,7 +238,7 @@ int getArgHexLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, cons
 }
 
 /*******************************************************************************
- * Name:  getArgInt
+ * Name:  getArgLong
  * Purpose: Reads an integer from cli or a value and returns it.
  *******************************************************************************/
 int getArgLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
