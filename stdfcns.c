@@ -225,7 +225,7 @@ int getArgHexLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, cons
   cstr csRv = csNew("");
   int  iErr = 0;
 
-  if (bShift == ARG_CLI)   shift(&csRv, piArg, argc, argv);
+  if (bShift == ARG_CLI) shift(&csRv, piArg, argc, argv);
   if (bShift == ARG_VAL) csSet(&csRv, pcVal);
 
   if (csRv.len == 0) return 0;
