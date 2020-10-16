@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.7.1
+ ** Version: v0.8.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -15,16 +15,20 @@
  ** 15.04.2020  JE    Changed getHexIntParm to getHexLongParm().
  ** 13.07.2020  JE    Changed 'ARG_VALUE' to 'ARG_VAL'.
  ** 05.08.2020  JE    Added getMename().
+ ** 07.09.2020  JE    Added readBytes(), printBytes().
+ ** 10.09.2020  JE    Added printHex2err() for debugging.
+ ** 08.10.2020  JE    Changed getFileSize() to use stat.
  *******************************************************************************/
 
 
 //******************************************************************************
 //* includes => see 'main.c'!
 
-#define _XOPEN_SOURCE 700 // To get POSIX 2008 (SUS) strptime() and mktime()
+#define _XOPEN_SOURCE 700 // To get POSIX 2008 (SUS) strptime() and mktime().
 #include <time.h>
-#include <endian.h>       // To get __LITTLE_ENDIAN
-#include <stdint.h>       // For uint8_t, etc. typedefs
+#include <endian.h>       // To get __LITTLE_ENDIAN.
+#include <stdint.h>       // For uint8_t, etc. typedefs.
+#include <sys/stat.h>     // for fstat to get file size.
 
 
 //******************************************************************************
@@ -209,7 +213,7 @@ ll getHexLongParm(cstr csParm, int* piErr) {
  * Purpose: Reads a string from cli or a value and returns it.
  *******************************************************************************/
 int getArgStr(cstr* pcsRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
-  if (bShift == ARG_CLI)   shift(pcsRv, piArg, argc, argv);
+  if (bShift == ARG_CLI) shift(pcsRv, piArg, argc, argv);
   if (bShift == ARG_VAL) csSet(pcsRv, pcVal);
 
   if (pcsRv->len == 0) return 0;
@@ -302,14 +306,40 @@ FILE* openFile(const char* pcName, const char* pcFlags) {
  * Name:  getFileSize
  * Purpose: Returns size of file in bytes.
  *******************************************************************************/
-li getFileSize(FILE* hFile) {
-  li liSize = 0;
+size_t getFileSize(FILE* hFile) {
+  struct stat sStat = {0};
+  fstat(hFile->_fileno, &sStat);
+  return sStat.st_size;
+}
 
-  fseek(hFile, 0, SEEK_END);
-  liSize = (li) ftell(hFile);
-  fseek(hFile, 0, SEEK_SET);
+/*******************************************************************************
+ * Name:  readBytes
+ * Purpose: Reads bytes from a file. 1 element = OK, 0 elements = EOF.
+ *******************************************************************************/
+int readBytes(void* pvBytes, size_t sLength, FILE* hFile) {
+  size_t sRead = 0;
+  sRead = fread(pvBytes, sLength, 1, hFile);
+  return sRead;
+}
 
-  return liSize;
+/*******************************************************************************
+ * Name:  printBytes
+ * Purpose: Prints bytes to stdout.
+ *******************************************************************************/
+void printBytes(uchar* pucBytes, size_t sLength) {
+  for (size_t i = 0; i < sLength; ++i)
+    printf("%c", pucBytes[i]);
+}
+
+/*******************************************************************************
+ * Name:  printHex2err
+ * Purpose: Prints bytes in hex to stderr for debuging purpose.
+ *******************************************************************************/
+void printHex2err(uchar* pucBytes, size_t sLength) {
+  fprintf(stderr, "0x");
+  for (size_t i = 0; i < sLength; ++i)
+    fprintf(stderr, "%02x", pucBytes[i]);
+  fprintf(stderr, "\n");
 }
 
 /*******************************************************************************

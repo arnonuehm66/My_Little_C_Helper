@@ -51,6 +51,8 @@
  ** 12.04.2020  JE    Now use stdfcns.c v0.5.2.
  ** 15.04.2020  JE    Now use stdfcns.c v0.6.1.
  ** 05.08.2020  JE    Now use stdfcns.c v0.7.1 and g_csMename.
+ ** 01.10.2020  JE    Added initGlobalVars() and moved init of type and prec.
+ ** 01.10.2020  JE    Removed 'g_csMename = csNew("")'.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -75,7 +77,7 @@
 //******************************************************************************
 //* defines & macros
 
-#define ME_VERSION "0.0.48"
+#define ME_VERSION "0.0.49"
 cstr g_csMename;
 
 #define ERR_NOERR 0x00
@@ -143,16 +145,7 @@ typedef struct s_entry {
 //******************************************************************************
 //* Global variables
 
-char* g_cType[] = {
-                    "-",
-                    "Entered via map, zip or coord.", // 1
-                    "Entered via favorite",           // 2
-                    "Home location",                  // 3
-                    "Entered via address",            // 4
-                    "Entered via POI",                // 5
-                    "Start of last calculated route", // 6
-                    "-"
-                  };
+char* g_cType[8] = {0};
 
 t_rx_matcher g_rx_c2Lbl        = {0};
 t_rx_matcher g_rx_c2Coords     = {0};
@@ -421,6 +414,21 @@ void initMatcher(t_rx_matcher* pMatcher, const char* pcRegex) {
   cstr csErr = csNew("");
   if (rxInitMatcher(pMatcher, pcRegex, "", &csErr) != RX_NO_ERROR)
     dispatchError(ERR_REGEX, csErr.cStr);
+}
+
+/*******************************************************************************
+ * Name:  initGlobalVars
+ * Purpose: Initializes all global varaiables.
+ *******************************************************************************/
+void initGlobalVars(void) {
+  g_cType[0] = "-";
+  g_cType[1] = "Entered via map; zip or coord."; // 1
+  g_cType[2] = "Entered via favorite";           // 2
+  g_cType[3] = "Home location";                  // 3
+  g_cType[4] = "Entered via address";            // 4
+  g_cType[5] = "Entered via POI";                // 5
+  g_cType[6] = "Start of last calculated route"; // 6
+  g_cType[7] = "-";
 }
 
 /*******************************************************************************
@@ -840,12 +848,13 @@ int main(int argc, char *argv[]) {
   int  iErr  = 0;
 
   // Save program's name.
-  g_csMename = csNew("");
   getMename(&g_csMename, argv[0]);
 
   // Get options and dispatch errors, if any.
   getOptions(argc, argv);
 
+  // Initialize everything.
+  initGlobalVars();
   initGlobalRegexes();
   initTimeFunctions();
 

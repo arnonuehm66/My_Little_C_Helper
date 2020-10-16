@@ -562,7 +562,7 @@ void csSanitize(cstr* pcsLbl) {
 
 /*******************************************************************************
  * Name:  csIconv
- * Purpose: Runs lib version of echo 'str' | iconv -f from -t to".
+ * Purpose: Runs lib version of `echo 'str' | iconv -f from -t to`.
  *******************************************************************************/
 int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo) {
   size_t  tLenFrom   = pcsFromStr->size;
