@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.8.3
+ ** Version: v0.8.4
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -18,6 +18,7 @@
  ** 07.09.2020  JE    Added readBytes(), printBytes().
  ** 10.09.2020  JE    Added printHex2err() for debugging.
  ** 08.10.2020  JE    Changed getFileSize() to use stat.
+ ** 20.10.2020  JE    Changed size_t to off_t in getFileSize().
  *******************************************************************************/
 
 
@@ -306,7 +307,7 @@ FILE* openFile(const char* pcName, const char* pcFlags) {
  * Name:  getFileSize
  * Purpose: Returns size of file in bytes.
  *******************************************************************************/
-size_t getFileSize(FILE* hFile) {
+off_t getFileSize(FILE* hFile) {
   struct stat sStat = {0};
   fstat(hFile->_fileno, &sStat);
   return sStat.st_size;
@@ -499,3 +500,4 @@ void initTimeFunctions(void) {
   // For timezone var in datetime2ticks().
   tzset();
 }
+
