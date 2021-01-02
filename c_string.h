@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.16.2
+ ** Version: v0.16.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -49,6 +49,7 @@
  ** 04.06.2020  JE    Added csSplitPos() to split at given offset.
  ** 04.06.2020  JE    Simplified csInStr();
  ** 01.07.2020  JE    Added '#include <string.h>' for strcmp().
+ ** 02.02.2021  JE    Changed all csClear() to csFree() in csCat() and csMid().
  *******************************************************************************/
 
 
@@ -363,8 +364,8 @@ void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
 
   csSet(pcsDest, csOut.cStr);
 
-  csClear(&csOut);
-  csClear(&csAdd);
+  csFree(&csOut);
+  csFree(&csAdd);
 }
 
 /*******************************************************************************
@@ -433,7 +434,7 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
   pcsDest->len            = llLength;
   pcsDest->size           = llLength + 1;
 
-  csClear(&csSource);
+  csFree(&csSource);
 }
 
 /*******************************************************************************
@@ -562,7 +563,7 @@ void csSanitize(cstr* pcsLbl) {
 
 /*******************************************************************************
  * Name:  csIconv
- * Purpose: Runs lib version of `echo 'str' | iconv -f from -t to`.
+ * Purpose: Runs lib version of echo 'str' | iconv -f from -t to".
  *******************************************************************************/
 int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo) {
   size_t  tLenFrom   = pcsFromStr->size;
