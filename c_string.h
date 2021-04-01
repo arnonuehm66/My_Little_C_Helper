@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.16.3
+ ** Version: v0.17.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -49,7 +49,11 @@
  ** 04.06.2020  JE    Added csSplitPos() to split at given offset.
  ** 04.06.2020  JE    Simplified csInStr();
  ** 01.07.2020  JE    Added '#include <string.h>' for strcmp().
- ** 02.02.2021  JE    Changed all csClear() to csFree() in csCat() and csMid().
+ ** 02.01.2021  JE    Changed all csClear() to csFree() in csCat() and csMid().
+ ** 16.02.2021  JE    Added (char*) to all malloc()s and realloc()s.
+ ** 16.02.2021  JE    Added #include <stdio.h>.
+ ** 01.04.2021  JE    Added csInStrRev().
+ ** 01.04.2021  JE    Added consts for csMid(), csInStr() and csInStrRev().
  *******************************************************************************/
 
 
@@ -63,6 +67,7 @@
 //******************************************************************************
 //* includes
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
@@ -76,6 +81,12 @@
 
 // To give the cstr var a clean initialisation use
 // cstr str = csNew("");
+
+// csMids()
+#define CS_MID_REST (-1)
+
+// csInStr(), csInStrRev()
+#define CS_NOT_FOUND (-1)
 
 
 //******************************************************************************
@@ -117,6 +128,7 @@ void        csSet(cstr* pcsString, const char* pcString);
 void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
 long long   csInStr(long long llPos, const char* pcString, const char* pcFind);
+long long   csInStrRev(long long llPos, const char* pcString, const char* pcFind);
 void        csMid(cstr* pcsDest, const char *pcSource, long long llOffset, long long llLength);
 long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char *pcString, const char *pcSplitAt);
 int         csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcString, long long llWidth);
@@ -147,7 +159,7 @@ void cstr_init(cstr* pcString) {
   pcString->lenUtf8  = 0;
   pcString->size     = 1;
   pcString->capacity = C_STRING_INITIAL_CAPACITY;
-  pcString->cStr     = malloc(sizeof(char) * pcString->capacity);
+  pcString->cStr     = (char*) malloc(sizeof(char) * pcString->capacity);
   pcString->cStr[0]  = '\0';
 }
 
@@ -179,7 +191,7 @@ void cstr_double_capacity_if_full(cstr* pcString, long long llSize) {
   while (pcString->size + llSize > pcString->capacity) pcString->capacity *= 2;
 
   // Reallocate new memory.
-  pcString->cStr = realloc(pcString->cStr, sizeof(char) * pcString->capacity);
+  pcString->cStr = (char*) realloc(pcString->cStr, sizeof(char) * pcString->capacity);
 }
 
 /*******************************************************************************
@@ -333,7 +345,7 @@ void csSetf(cstr* pcsString, const char* pcFormat, ...) {
   va_start(args1, pcFormat);
   va_start(args2, pcFormat);
 
-  char* pcBuff = malloc(sizeof(char) * vsnprintf(NULL, 0, pcFormat, args1) + 1);
+  char* pcBuff = (char*) malloc(sizeof(char) * vsnprintf(NULL, 0, pcFormat, args1) + 1);
   vsprintf(pcBuff, pcFormat, args2);
 
   va_end(args1);
@@ -388,7 +400,22 @@ long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
     else
       c = 0;
 
-  return -1;
+  return CS_NOT_FOUND;
+}
+
+/*******************************************************************************
+ * Name: csInStrRev
+ * Purpose: Finds offset of the last occurence of pcFind in pcString.
+ *******************************************************************************/
+long long csInStrRev(long long llPos, const char* pcString, const char* pcFind) {
+  long long llLast = CS_NOT_FOUND;
+
+  while ((llPos = csInStr(llPos, pcString, pcFind)) != CS_NOT_FOUND) {
+    llLast = llPos;
+    ++llPos;
+  }
+
+  return llLast;
 }
 
 /*******************************************************************************
@@ -563,7 +590,7 @@ void csSanitize(cstr* pcsLbl) {
 
 /*******************************************************************************
  * Name:  csIconv
- * Purpose: Runs lib version of echo 'str' | iconv -f from -t to".
+ * Purpose: Runs lib version of `echo 'str' | iconv -f from -t to`.
  *******************************************************************************/
 int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo) {
   size_t  tLenFrom   = pcsFromStr->size;
