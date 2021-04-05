@@ -20,6 +20,7 @@
  ** 08.10.2020  JE    Changed getFileSize() to use stat.
  ** 20.10.2020  JE    Changed size_t to off_t in getFileSize().
  ** 05.04.2021  JE    Added '#include "c_string.h"' for IDE convienience.
+ ** 05.04.2021  JE    Now uses csInStrRev() from c_string.h v0.18.3.
  *******************************************************************************/
 
 
@@ -88,21 +89,15 @@ void version(void) {
  * Purpose: Get the name with which the programm was started.
  *******************************************************************************/
 void getMename(cstr* pcsMename, const char* argv0) {
-  ll   llPos     =  0;
-  ll   llLastPos = -1;
-  cstr csRest    = csNew("");
-  cstr csName    = csNew("");
+  ll   llPos  = 0;
+  cstr csRest = csNew("");
 
-  // Get last '/' if any.
-  while ((llPos = csInStr(llPos, argv0, "/")) > -1) {
-    llLastPos = llPos;
-    ++llPos;
-  }
+  // Get the very last '/' if any.
+  llPos = csInStrRev(CS_START, argv0, "/");
 
   // Split at that '/' or get full string.
-  if (llLastPos > -1) {
-    csSplitPos(llLastPos, &csRest, &csName, argv0, 1);
-    csSet(pcsMename, csName.cStr);
+  if (llPos != CS_NOT_FOUND) {
+    csSplitPos(llPos, &csRest, pcsMename, argv0, 1);
   }
   else {
     csSet(pcsMename, argv0);
