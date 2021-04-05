@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.18.2
+ ** Version: v0.18.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -53,9 +53,12 @@
  ** 16.02.2021  JE    Added (char*) to all malloc()s and realloc()s.
  ** 16.02.2021  JE    Added #include <stdio.h>.
  ** 01.04.2021  JE    Added csInStrRev().
+ ** 01.04.2021  JE    Added consts for csMids(), csInStr() and csInStrRev().
  ** 02.04.2021  JE    Now use new consts in own functions.
  ** 05.04.2021  JE    Now all internal cstr_*() functions are static.
  ** 05.04.2021  JE    Commented out unused function cstr_check().
+ ** 05.04.2021  JE    Added const CS_START for external use with csInStr() and
+ **                   csInStrRev().
  *******************************************************************************/
 
 
@@ -88,6 +91,7 @@
 #define CS_MID_REST (-1)
 
 // csInStr(), csInStrRev()
+#define CS_START      (0)
 #define CS_NOT_FOUND (-1)
 
 
