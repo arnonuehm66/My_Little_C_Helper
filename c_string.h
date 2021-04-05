@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.17.2
+ ** Version: v0.18.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -53,7 +53,9 @@
  ** 16.02.2021  JE    Added (char*) to all malloc()s and realloc()s.
  ** 16.02.2021  JE    Added #include <stdio.h>.
  ** 01.04.2021  JE    Added csInStrRev().
- ** 01.04.2021  JE    Added consts for csMid(), csInStr() and csInStrRev().
+ ** 02.04.2021  JE    Now use new consts in own functions.
+ ** 05.04.2021  JE    Now all internal cstr_*() functions are static.
+ ** 05.04.2021  JE    Commented out unused function cstr_check().
  *******************************************************************************/
 
 
@@ -107,14 +109,14 @@ typedef struct s_cstr {
 //* For a better function's arrangement.
 
 // Internal functions.
-void      cstr_init(cstr* pcString);
-void      cstr_check(cstr* pcString);
-void      cstr_double_capacity_if_full(cstr* pcString, long long llSize);
-int       cstr_utf8_cont(const char c);
-int       cstr_utf8_bytes(const char *c);
-long long cstr_lenUtf8(const char* pcString, long long *pLen);
-long long cstr_len(const char* pcString);
-int       cstr_check_if_whitespace(const char cChar, int bWithNewLines);
+static void      cstr_init(cstr* pcString);
+// static void      cstr_check(cstr* pcString);
+static void      cstr_double_capacity_if_full(cstr* pcString, long long llSize);
+static int       cstr_utf8_cont(const char c);
+static int       cstr_utf8_bytes(const char *c);
+static long long cstr_lenUtf8(const char* pcString, long long *pLen);
+static long long cstr_len(const char* pcString);
+static int       cstr_check_if_whitespace(const char cChar, int bWithNewLines);
 
 // External functions.
 
@@ -153,7 +155,7 @@ long long   csHex2ll(cstr csValue);
 /*******************************************************************************
  * Name: cstr_init
  *******************************************************************************/
-void cstr_init(cstr* pcString) {
+static void cstr_init(cstr* pcString) {
   if (pcString->cStr != NULL) free(pcString->cStr);
   pcString->len      = 0;
   pcString->lenUtf8  = 0;
@@ -163,27 +165,27 @@ void cstr_init(cstr* pcString) {
   pcString->cStr[0]  = '\0';
 }
 
-/*******************************************************************************
- * Name: cstr_check
- *******************************************************************************/
-void cstr_check(cstr* pcString) {
-  if (pcString->cStr == NULL) {
-    cstr_init(pcString);
-    return;
-  }
-  if (pcString->size      > pcString->capacity        ||
-      pcString->capacity  < C_STRING_INITIAL_CAPACITY ||
-      pcString->size     != pcString->len + 1         ||
-      pcString->len      != cstr_len(pcString->cStr)) {
-    pcString->cStr = NULL;
-    cstr_init(pcString);
-  }
-}
+// /*******************************************************************************
+//  * Name: cstr_check
+//  *******************************************************************************/
+// static void cstr_check(cstr* pcString) {
+//   if (pcString->cStr == NULL) {
+//     cstr_init(pcString);
+//     return;
+//   }
+//   if (pcString->size      > pcString->capacity        ||
+//       pcString->capacity  < C_STRING_INITIAL_CAPACITY ||
+//       pcString->size     != pcString->len + 1         ||
+//       pcString->len      != cstr_len(pcString->cStr)) {
+//     pcString->cStr = NULL;
+//     cstr_init(pcString);
+//   }
+// }
 
 /*******************************************************************************
  * Name: cstr_double_capacity_if_full
  *******************************************************************************/
-void cstr_double_capacity_if_full(cstr* pcString, long long llSize) {
+static void cstr_double_capacity_if_full(cstr* pcString, long long llSize) {
   // Avoid unnecessary reallocations.
   if (pcString->size + llSize <= pcString->capacity) return;
 
@@ -197,14 +199,14 @@ void cstr_double_capacity_if_full(cstr* pcString, long long llSize) {
 /*******************************************************************************
  * Name: cstr_utf8_cont
  *******************************************************************************/
-int cstr_utf8_cont(const char c) {
+static int cstr_utf8_cont(const char c) {
   return (c & 0xc0) == 0x80;
 }
 
 /*******************************************************************************
  * Name: cstr_utf8_bytes
  *******************************************************************************/
-int cstr_utf8_bytes(const char* c) {
+static int cstr_utf8_bytes(const char* c) {
   if ((c[0] & 0x80) == 0x00) return 1;
 
   if ((c[0] & 0xe0) == 0xc0 &&
@@ -225,7 +227,7 @@ int cstr_utf8_bytes(const char* c) {
 /*******************************************************************************
  * Name: cstr_lenUtf8
  *******************************************************************************/
-long long cstr_lenUtf8(const char* pcString, long long* pLen) {
+static long long cstr_lenUtf8(const char* pcString, long long* pLen) {
   long long lenUtf8 = 0;
            *pLen    = 0;
 
@@ -240,7 +242,7 @@ long long cstr_lenUtf8(const char* pcString, long long* pLen) {
 /*******************************************************************************
  * Name: cstr_len
  *******************************************************************************/
-long long cstr_len(const char* pcString) {
+static long long cstr_len(const char* pcString) {
   int i = 0;
   while (pcString[i] != '\0') ++i;
   return i;
@@ -249,7 +251,7 @@ long long cstr_len(const char* pcString) {
 /*******************************************************************************
  * Name: cstr_check_if_whitespace
  *******************************************************************************/
-int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
+static int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
   if (bWithNewLines) {
     if (cChar == ' '  || cChar == '\t' ||
         cChar == '\n' || cChar == '\r') return 1;
@@ -447,7 +449,7 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
     return;
 
   // Adjust length to max if it exceeds string's length or is negative.
-  if (llLength > csSource.len - llOffset || llLength < 0)
+  if (llLength > csSource.len - llOffset || llLength == CS_MID_REST)
     llLength = csSource.len - llOffset;
 
   cstr_double_capacity_if_full(pcsDest, llLength + 1);
@@ -474,8 +476,8 @@ long long csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const cha
 
   // Split, if found.
   if (llPos > -1) {
-    csMid(pcsLeft,  pcString,               0, llPos);
-    csMid(pcsRight, pcString, llPos + llWidth,    -1);
+    csMid(pcsLeft,  pcString,               0,       llPos);
+    csMid(pcsRight, pcString, llPos + llWidth, CS_MID_REST);
   }
 
   // Return, where the split occured.
@@ -490,8 +492,8 @@ int csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcStr
   long long llStringLen = cstr_len(pcString);
 
   if (llPos >= 0 && llPos <= llStringLen && llWidth >= 0 && llWidth <= llStringLen) {
-    csMid(pcsLeft,  pcString,               0, llPos);
-    csMid(pcsRight, pcString, llPos + llWidth,    -1);
+    csMid(pcsLeft,  pcString,               0,       llPos);
+    csMid(pcsRight, pcString, llPos + llWidth, CS_MID_REST);
     return 0;
   }
   return 1;
