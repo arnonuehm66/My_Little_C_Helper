@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.8.4
+ ** Version: v0.8.5
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -19,6 +19,7 @@
  ** 10.09.2020  JE    Added printHex2err() for debugging.
  ** 08.10.2020  JE    Changed getFileSize() to use stat.
  ** 20.10.2020  JE    Changed size_t to off_t in getFileSize().
+ ** 05.04.2021  JE    Added '#include "c_string.h"' for IDE convienience.
  *******************************************************************************/
 
 
@@ -30,6 +31,9 @@
 #include <endian.h>       // To get __LITTLE_ENDIAN.
 #include <stdint.h>       // For uint8_t, etc. typedefs.
 #include <sys/stat.h>     // for fstat to get file size.
+
+// For IDE convienience.
+#include "c_string.h"
 
 
 //******************************************************************************
