@@ -53,6 +53,8 @@
  ** 05.08.2020  JE    Now use stdfcns.c v0.7.1 and g_csMename.
  ** 01.10.2020  JE    Added initGlobalVars() and moved init of type and prec.
  ** 01.10.2020  JE    Removed 'g_csMename = csNew("")'.
+ ** 05.02.2021  JE    Added '-p' for printing progress to stderr.
+ ** 05.02.2021  JE    Changed all long to size_t.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -77,7 +79,7 @@
 //******************************************************************************
 //* defines & macros
 
-#define ME_VERSION "0.0.49"
+#define ME_VERSION "0.0.50"
 cstr g_csMename;
 
 #define ERR_NOERR 0x00
@@ -121,9 +123,10 @@ typedef struct s_data {
 
 // Arguments and options.
 typedef struct s_options {
-  long   lByteOff;
   int    iTestMode;
+  size_t sByteOff;
   int    iPrtOff;
+  int    iPrtPrgrs;
   int    iOptX;     // Integer verion.
   cstr   csOptX;    // String version.
   cstr   csRx;
@@ -174,12 +177,13 @@ void usage(int iErr, const char* pcMsg) {
 
   csSetf(&csMsg, "%s"
 //|************************ 80 chars width ****************************************|
-   "usage: %s [-t] [-o] [-x n] [-X <str> [--rx <regex>] [--rxF <flags>]] [-e hex] [ox=hex] [-y yyyy [-Y yyyy]] file1 [file2 ...]\n"
+   "usage: %s [-t] [-b n] [-o] [-p] [-x n] [-X <str> [--rx <regex>] [--rxF <flags>]] [-e hex] [ox=hex] [-y yyyy [-Y yyyy]] file1 [file2 ...]\n"
    "       %s [-h|--help|-v|--version]\n"
    " What the programm should do.\n"
    " '-e' and 'ox=' can be entered as hexadecimal with '0x' prefix or as decimal\n"
    " with postfix K, M, G (meaning Kilo- Mega- and Giga-bytes based on 1024).\n"
    "  -t:            don't execute printed commands (default execute)\n"
+   "  -b n:          byte offset per file (default 0)\n"
    "  -o:            print additional offset column\n"
    "  -x n:          this is an option eating n\n"
    "  -X <str>:      this is an option eating a string\n"
@@ -258,7 +262,7 @@ void getOptions(int argc, char* argv[]) {
 
   // Set defaults.
   g_tOpts.iTestMode  = 0;
-  g_tOpts.lByteOff   = 0;
+  g_tOpts.sByteOff   = 0;
   g_tOpts.iPrtOff    = 0;
   g_tOpts.iOptX      = 0;
   g_tOpts.csOptX     = csNew("0f:aa:08:7e:50");
@@ -320,6 +324,11 @@ next_argument:
         }
         if (cOpt == 't') {
           g_tOpts.iTestMode = 1;
+          continue;
+        }
+        if (cOpt == 'b') {
+          if (! getArgLong((ll*) &g_tOpts.sByteOff, &iArg, argc, argv, ARG_CLI, NULL))
+            dispatchError(ERR_ARGS, "Byte offset is missing");
           continue;
         }
         if (cOpt == 'o') {
@@ -497,8 +506,7 @@ void freeRxStructs(void) {
  *******************************************************************************/
 void printHeader(void) {
   printf("Remark\tLongitude\tLatitude\tLabel");
-  if (g_tOpts.iPrtOff)
-    printf("\tOffset");
+  if (g_tOpts.iPrtOff) printf("\tOffset");
   printf("\n");
 }
 
@@ -663,8 +671,7 @@ int getData(t_rx_matcher* rxM, t_data* ptD) {
  *******************************************************************************/
 void printEntry(int iOffset) {
   printf("<Remark>\t<Longitude>\t<Latitude>\t<Label>");
-  if (g_tOpts.iPrtOff)
-    printf("\t%d", iOffset);
+  if (g_tOpts.iPrtOff) printf("\t%d", iOffset);
   printf("\n");
 }
 
@@ -766,6 +773,7 @@ void debug(void) {
   printf("\n");
 
   printf("g_tOpts.iTestMode   = %d\n",         g_tOpts.iTestMode);
+  printf("g_tOpts.sByteOff    = %ld\n",        g_tOpts.sByteOff);
   printf("g_tOpts.iPrtOff     = %d\n",         g_tOpts.iPrtOff);
   printf("g_tOpts.iOptX       = %d\n",         g_tOpts.iOptX);
   printf("g_tOpts.csOptX.cStr = '%s'\n",       g_tOpts.csOptX.cStr);
@@ -829,14 +837,25 @@ int getNextDataChunk(t_data* ptData, size_t sChunkSize, size_t sChunk, size_t sT
   return readBytes2ByteArray(ptData, sChunk * sChunkSize, sChunkSize + sTwice, hFile);
 }
 
+/*******************************************************************************
+ * Name:  printProgress
+ * Purpose: Prints progress of search.
+ *******************************************************************************/
+void printProgress(const char* cFile, size_t sFileSize, size_t sOff) {
+  ldbl ldPercent = (ldbl) sOff / (ldbl) sFileSize * 100;
+  fprintf(stderr, "\rLast match in '%s' at %li (%.2Lf %%) of %li Bytes   ",
+          cFile, sOff, ldPercent, sFileSize);
+}
+
 
 //******************************************************************************
 //* main
 
 int main(int argc, char *argv[]) {
-  FILE*  hFile  = NULL;
-  size_t sOff   = 0;
-  size_t sChunk = 0;
+  FILE*  hFile     = NULL;
+  size_t sOff      = 0;
+  size_t sChunk    = 0;
+  size_t sFileSize = 0;
 
   // 1 GiB chunks with 1 KiB overlap.
   t_data tData      = {0};
@@ -866,7 +885,8 @@ int main(int argc, char *argv[]) {
 
   // Get all data from all files.
   for (int i = 0; i < g_tArgs.sCount; ++i) {
-    hFile = openFile(g_tArgs.pStr[i].cStr, "rb");
+    hFile     = openFile(g_tArgs.pStr[i].cStr, "rb");
+    sFileSize = getFileSize(hFile);
 //-- file ----------------------------------------------------------------------
     while (!feof(hFile)) {
       sChunk       = 0;
@@ -878,6 +898,8 @@ int main(int argc, char *argv[]) {
           // Get global offset.
           sOff = sChunk * sChunkSize + g_rx_c7TomTomLive.dasStart.pSize[0];
 
+          if (g_tOpts.iPrtPrgrs) printProgress(g_tArgs.pStr[i].cStr, sFileSize, sOff);
+
           if (! getData(&g_rx_c7TomTomLive, &tData)) continue;
           printEntry(sOff);
         }
@@ -885,6 +907,7 @@ int main(int argc, char *argv[]) {
       }
     }
 //-- file ----------------------------------------------------------------------
+    if (g_tOpts.iPrtPrgrs) fprintf(stderr, "\n");
     fclose(hFile);
   }
 
