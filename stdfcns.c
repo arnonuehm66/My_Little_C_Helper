@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.8.5
+ ** Version: v0.9.4
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -18,9 +18,11 @@
  ** 07.09.2020  JE    Added readBytes(), printBytes().
  ** 10.09.2020  JE    Added printHex2err() for debugging.
  ** 08.10.2020  JE    Changed getFileSize() to use stat.
+ ** 12.03.2021  JE    Added a few 'printf()' defines for debugging.
  ** 20.10.2020  JE    Changed size_t to off_t in getFileSize().
  ** 05.04.2021  JE    Added '#include "c_string.h"' for IDE convienience.
  ** 05.04.2021  JE    Now uses csInStrRev() from c_string.h v0.18.3.
+ ** 25.03.2021  JE    Added #define prtVarUInt(var).
  *******************************************************************************/
 
 
@@ -53,6 +55,14 @@
 // getArg*()
 #define ARG_VAL 0x00
 #define ARG_CLI 0x01
+
+// Debug prints
+#define prtVarStr(var)  printf("%s = %s\n", #var, var)
+#define prtVarInt(var)  printf("%s = %ld\n", #var, var)
+#define prtVarUInt(var) printf("%s = %lu\n", #var, var)
+#define prtVarDbl(var)  printf("%s = %f\n", #var, var)
+#define prtHl(n) {for(int i=0;i<n;++i){printf("-");}printf("\n");}
+#define prtHey() printf("Hey!\n")
 
 
 //******************************************************************************
@@ -306,7 +316,7 @@ FILE* openFile(const char* pcName, const char* pcFlags) {
  * Name:  getFileSize
  * Purpose: Returns size of file in bytes.
  *******************************************************************************/
-off_t getFileSize(FILE* hFile) {
+size_t getFileSize(FILE* hFile) {
   struct stat sStat = {0};
   fstat(hFile->_fileno, &sStat);
   return sStat.st_size;
@@ -499,4 +509,3 @@ void initTimeFunctions(void) {
   // For timezone var in datetime2ticks().
   tzset();
 }
-
