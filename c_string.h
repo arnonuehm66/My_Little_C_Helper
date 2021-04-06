@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.18.3
+ ** Version: v0.18.5
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -53,12 +53,13 @@
  ** 16.02.2021  JE    Added (char*) to all malloc()s and realloc()s.
  ** 16.02.2021  JE    Added #include <stdio.h>.
  ** 01.04.2021  JE    Added csInStrRev().
- ** 01.04.2021  JE    Added consts for csMids(), csInStr() and csInStrRev().
+ ** 01.04.2021  JE    Added consts for csMid(), csInStr() and csInStrRev().
  ** 02.04.2021  JE    Now use new consts in own functions.
  ** 05.04.2021  JE    Now all internal cstr_*() functions are static.
  ** 05.04.2021  JE    Commented out unused function cstr_check().
  ** 05.04.2021  JE    Added const CS_START for external use with csInStr() and
  **                   csInStrRev().
+ ** 06.04.2021  JE    Deleted cstr_check().
  *******************************************************************************/
 
 
@@ -114,7 +115,6 @@ typedef struct s_cstr {
 
 // Internal functions.
 static void      cstr_init(cstr* pcString);
-// static void      cstr_check(cstr* pcString);
 static void      cstr_double_capacity_if_full(cstr* pcString, long long llSize);
 static int       cstr_utf8_cont(const char c);
 static int       cstr_utf8_bytes(const char *c);
@@ -168,23 +168,6 @@ static void cstr_init(cstr* pcString) {
   pcString->cStr     = (char*) malloc(sizeof(char) * pcString->capacity);
   pcString->cStr[0]  = '\0';
 }
-
-// /*******************************************************************************
-//  * Name: cstr_check
-//  *******************************************************************************/
-// static void cstr_check(cstr* pcString) {
-//   if (pcString->cStr == NULL) {
-//     cstr_init(pcString);
-//     return;
-//   }
-//   if (pcString->size      > pcString->capacity        ||
-//       pcString->capacity  < C_STRING_INITIAL_CAPACITY ||
-//       pcString->size     != pcString->len + 1         ||
-//       pcString->len      != cstr_len(pcString->cStr)) {
-//     pcString->cStr = NULL;
-//     cstr_init(pcString);
-//   }
-// }
 
 /*******************************************************************************
  * Name: cstr_double_capacity_if_full
