@@ -2,27 +2,28 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.9.4
+ ** Version: v0.9.5
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
  ** 30.11.2019  JE    Created file.
- ** 17.01.2020  JE    Added necessary includes to run with nodiff.
- ** 10.03.2020  JE    Added 'stdint.h' to use C99 compatible uint32_t type.
- ** 11.03.2020  JE    Added invInt(), isDigit() and checkDateTime();
- ** 12.04.2020  JE    Added getArg*() function family.
+ ** 17.01.2020  JE    Added necessary includes to run with 'nodiff'.
+ ** 10.03.2020  JE    Added 'stdint.h' to use C99 compatible 'uint32_t' type.
+ ** 11.03.2020  JE    Added 'invInt()', 'isDigit()' and 'checkDateTime()'.
+ ** 12.04.2020  JE    Added 'getArg*()' function family.
  ** 12.04.2020  JE    Deleted boolean constants.
- ** 15.04.2020  JE    Changed getHexIntParm to getHexLongParm().
+ ** 15.04.2020  JE    Changed 'getHexIntParm()' to 'getHexLongParm()'.
  ** 13.07.2020  JE    Changed 'ARG_VALUE' to 'ARG_VAL'.
- ** 05.08.2020  JE    Added getMename().
- ** 07.09.2020  JE    Added readBytes(), printBytes().
- ** 10.09.2020  JE    Added printHex2err() for debugging.
- ** 08.10.2020  JE    Changed getFileSize() to use stat.
+ ** 05.08.2020  JE    Added 'getMename()'.
+ ** 07.09.2020  JE    Added 'readBytes()', 'printBytes()'.
+ ** 10.09.2020  JE    Added 'printHex2err()' for debugging.
+ ** 08.10.2020  JE    Changed 'getFileSize()' to use stat.
  ** 12.03.2021  JE    Added a few 'printf()' defines for debugging.
- ** 20.10.2020  JE    Changed size_t to off_t in getFileSize().
+ ** 20.10.2020  JE    Changed 'size_t' to 'off_t' in 'getFileSize()'.
  ** 05.04.2021  JE    Added '#include "c_string.h"' for IDE convienience.
- ** 05.04.2021  JE    Now uses csInStrRev() from c_string.h v0.18.3.
- ** 25.03.2021  JE    Added #define prtVarUInt(var).
+ ** 05.04.2021  JE    Now uses 'csInStrRev()' from 'c_string.h' v0.18.3.
+ ** 25.03.2021  JE    Added '#define prtVarUInt(var)'.
+ ** 19.04.2021  JE    Changed 'prtHey()' to 'prtLn(str)'.
  *******************************************************************************/
 
 
@@ -62,7 +63,7 @@
 #define prtVarUInt(var) printf("%s = %lu\n", #var, var)
 #define prtVarDbl(var)  printf("%s = %f\n", #var, var)
 #define prtHl(n) {for(int i=0;i<n;++i){printf("-");}printf("\n");}
-#define prtHey() printf("Hey!\n")
+#define prtLn(str) printf("str\n");
 
 
 //******************************************************************************

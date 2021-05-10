@@ -55,6 +55,7 @@
  ** 01.10.2020  JE    Removed 'g_csMename = csNew("")'.
  ** 05.02.2021  JE    Added '-p' for printing progress to stderr.
  ** 05.02.2021  JE    Changed all long to size_t.
+ ** 19.04.2021  JE    Now use dynamic-array-macros.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -70,16 +71,16 @@
 
 //#include "../../libs/c_string.h"
 //#include "../../libs/c_my_regex.h"
-//#include "../../libs/c_dynamic_arrays.h"
+//#include "../../libs/c_dynamic_arrays_macros.h"
 #include "c_string.h"
 #include "c_my_regex.h"
-#include "c_dynamic_arrays.h"
+#include "c_dynamic_arrays_macros.h"
 
 
 //******************************************************************************
 //* defines & macros
 
-#define ME_VERSION "0.0.50"
+#define ME_VERSION "0.0.51"
 cstr g_csMename;
 
 #define ERR_NOERR 0x00
@@ -145,6 +146,10 @@ typedef struct s_entry {
   cstr    csLbl;
 } t_entry;
 
+// Dynamic array macro sruct declaration.
+s_array(cstr);
+
+
 //******************************************************************************
 //* Global variables
 
@@ -157,8 +162,8 @@ t_rx_matcher g_rx_c7TomTomLive = {0};
 t_entry g_tE;
 
 // Arguments
-t_options    g_tOpts; // CLI options and arguments.
-t_array_cstr g_tArgs; // Free arguments.
+t_options     g_tOpts;  // CLI options and arguments.
+t_array(cstr) g_tArgs;  // Free arguments.
 
 
 //******************************************************************************
@@ -274,7 +279,7 @@ void getOptions(int argc, char* argv[]) {
   g_tOpts.tDateTime  = NO_TICK;
 
   // Init free argument's dynamic array.
-  dacsInit(&g_tArgs);
+  daInit(cstr, g_tArgs);
 
   // Loop all arguments from command line POSIX style.
   while (iArg < argc) {
@@ -384,7 +389,7 @@ next_argument:
       dispatchError(ERR_ARGS, "Invalid equality option");
     }
     // Else, it's just a filename.
-    dacsAdd(&g_tArgs, csArgv.cStr);
+    daAdd(cstr, g_tArgs, csNew(csArgv.cStr));
   }
 
   // Sanity check of arguments and flags.
@@ -785,8 +790,8 @@ void debug(void) {
 
   printf("Free argument's dynamic array: ");
   for (int i = 0; i < g_tArgs.sCount - 1; ++i)
-    printf("%s, ", g_tArgs.pStr[i].cStr);
-  printf("%s\n", g_tArgs.pStr[g_tArgs.sCount - 1].cStr);
+    printf("%s, ", g_tArgs.pVal[i].cStr);
+  printf("%s\n", g_tArgs.pVal[g_tArgs.sCount - 1].cStr);
 
   // How to assemble regex via cstr variables.
   // "([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})"
@@ -885,7 +890,7 @@ int main(int argc, char *argv[]) {
 
   // Get all data from all files.
   for (int i = 0; i < g_tArgs.sCount; ++i) {
-    hFile     = openFile(g_tArgs.pStr[i].cStr, "rb");
+    hFile     = openFile(g_tArgs.pVal[i].cStr, "rb");
     sFileSize = getFileSize(hFile);
 //-- file ----------------------------------------------------------------------
     while (!feof(hFile)) {
@@ -898,7 +903,7 @@ int main(int argc, char *argv[]) {
           // Get global offset.
           sOff = sChunk * sChunkSize + g_rx_c7TomTomLive.dasStart.pSize[0];
 
-          if (g_tOpts.iPrtPrgrs) printProgress(g_tArgs.pStr[i].cStr, sFileSize, sOff);
+          if (g_tOpts.iPrtPrgrs) printProgress(g_tArgs.pVal[i].cStr, sFileSize, sOff);
 
           if (! getData(&g_rx_c7TomTomLive, &tData)) continue;
           printEntry(sOff);
@@ -913,7 +918,7 @@ int main(int argc, char *argv[]) {
 
   // Free all used memory, prior end of program.
   csFree(&csErr);
-  dacsFree(&g_tArgs);
+  daFreeEx(g_tArgs, cStr);
   freeRxStructs();
 
   return ERR_NOERR;
