@@ -7,7 +7,7 @@ Put everything in a directory and compile it with
 
 <code>gcc -Wall main.c -o skeleton_main_c -lpcre2-8</code>
 
-Caveat: If you use libraries with '-l' add them all at the end of the gcc command line to prevent unnecessary errors!
+<b>Caveat:</b> If you use libraries with '-l' add them all at the end of the gcc command line to prevent unnecessary errors!
 
 If you want to use 'c_my_regex.h' you have to install 'libpcre2' on your system.
 
