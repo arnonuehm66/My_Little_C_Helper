@@ -1,3 +1,5 @@
+NAME = skeleton_main
+
 CC = gcc
 CFLAGS = -Wall -Ofast -DNDEBUG
 LIBS = -lpcre2-8 -lcrypto
