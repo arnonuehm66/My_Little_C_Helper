@@ -17,9 +17,9 @@ Without 'c_my_regex.h'
 
 will do the trick. ;o)
 
-Now there is an addtional `Makefile`, where you can compile debug or retail version and delete it. Use it like this:
+Now there is an addtional `Makefile`, where you can compile debug or release version and delete it. Use it like this:
 
-`make` : Compile retail version.
+`make` : Compile release version.
 
 `make debug` : Compile debug version.
 
