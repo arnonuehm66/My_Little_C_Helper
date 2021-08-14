@@ -23,4 +23,4 @@ Now there is an addtional `Makefile`, where you can compile debug or release ver
 
 `make debug` : Compile debug version.
 
-`make clean` : Delete current program.
+`make clean` : Delete the program.
