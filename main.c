@@ -147,7 +147,8 @@ typedef struct s_entry {
 } t_entry;
 
 // Dynamic array macro sruct declaration.
-s_array(cstr);
+// s_array(cstr);
+// Used already in regex!
 
 
 //******************************************************************************
@@ -521,9 +522,9 @@ void printHeader(void) {
 //*******************************************************************************
 void getLable(t_rx_matcher* rxMatcher, t_data* ptData, cstr* pcsLbl) {
   cstr csLbl = csNew("");
-  int  iOff  = rxMatcher->dasEnd.pSize[2];
-  int  iLen1 = toInt((char*) &ptData->pBytes[rxMatcher->dasStart.pSize[1]], 1);
-  int  iLen2 = toInt((char*) &ptData->pBytes[rxMatcher->dasStart.pSize[2]], 1);
+  int  iOff  = rxMatcher->dasEnd.pVal[2];
+  int  iLen1 = toInt((char*) &ptData->pBytes[rxMatcher->dasStart.pVal[1]], 1);
+  int  iLen2 = toInt((char*) &ptData->pBytes[rxMatcher->dasStart.pVal[2]], 1);
 
   // Error check.
   if (iLen1 != iLen2 + 2) return;
@@ -603,11 +604,11 @@ int toWgs84(t_coord* ptcLon, t_coord* ptcLat) {
 //* Purpose: Converts one or two coordinate pairs from bin to integer.
 //*******************************************************************************
 void getCoord(t_rx_matcher* rxM, t_data* ptD, ldbl* ldLo1, ldbl* ldLa1, ldbl* ldLo2, ldbl* ldLa2) {
-  *ldLo1 = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[1]], 4);
-  *ldLa1 = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[2]], 4);
+  *ldLo1 = toInt((char*) &ptD->pBytes[rxM->dasStart.pVal[1]], 4);
+  *ldLa1 = toInt((char*) &ptD->pBytes[rxM->dasStart.pVal[2]], 4);
   if (! (ldLo2 != NULL && ldLa2 != NULL)) return;
-  *ldLo2 = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[3]], 4);
-  *ldLa2 = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[4]], 4);
+  *ldLo2 = toInt((char*) &ptD->pBytes[rxM->dasStart.pVal[3]], 4);
+  *ldLa2 = toInt((char*) &ptD->pBytes[rxM->dasStart.pVal[4]], 4);
 }
 
 //*******************************************************************************
@@ -650,12 +651,12 @@ void getCoordinates(t_data* ptD, size_t sOff) {
  * Purpose: Gets raw bytes and converts them to readable data.
  *******************************************************************************/
 int getData(t_rx_matcher* rxM, t_data* ptD) {
-  size_t sPos = rxM->dasStart.pSize[0];
+  size_t sPos = rxM->dasStart.pVal[0];
 
   // Convert matched bytes.
-  g_tE.iType        = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[2]], 1);
-  g_tE.tcLon.ldlVal = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[3]], 4);
-  g_tE.tcLat.ldlVal = toInt((char*) &ptD->pBytes[rxM->dasStart.pSize[4]], 4);
+  g_tE.iType        = toInt((char*) &ptD->pBytes[rxM->dasStart.pVal[2]], 1);
+  g_tE.tcLon.ldlVal = toInt((char*) &ptD->pBytes[rxM->dasStart.pVal[3]], 4);
+  g_tE.tcLat.ldlVal = toInt((char*) &ptD->pBytes[rxM->dasStart.pVal[4]], 4);
 
   // Quick error check.
   if (g_tE.iType == 0) return 0;
@@ -704,7 +705,7 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   printf("Start offset = %lu\n", rxMatcher.sPos);
   while (rxMatch(&rxMatcher, RX_KEEP_POS, pcToSearch, RX_NO_COUNT, &iErr, &csErr)) {
     for (int i = 0; i < rxMatcher.dacsMatch.sCount; ++i)
-      printf("$%d = '%s'\n", i, rxMatcher.dacsMatch.pStr[i].cStr);
+      printf("$%d = '%s'\n", i, rxMatcher.dacsMatch.pVal[i].cStr);
     printf("Next offset = %lu\n", rxMatcher.sPos);
   }
   printf("----\n");
@@ -901,7 +902,7 @@ int main(int argc, char *argv[]) {
         g_rx_c7TomTomLive.sPos = 0; // Reset start of regex for each chunk.
         while (rxMatch(&g_rx_c7TomTomLive, RX_KEEP_POS, (char*) tData.pBytes, tData.sSize, &iErr, &csErr)) {
           // Get global offset.
-          sOff = sChunk * sChunkSize + g_rx_c7TomTomLive.dasStart.pSize[0];
+          sOff = sChunk * sChunkSize + g_rx_c7TomTomLive.dasStart.pVal[0];
 
           if (g_tOpts.iPrtPrgrs) printProgress(g_tArgs.pVal[i].cStr, sFileSize, sOff);
 
