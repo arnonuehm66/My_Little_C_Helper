@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.18.5
+ ** Version: v0.19.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -60,6 +60,8 @@
  ** 05.04.2021  JE    Added const CS_START for external use with csInStr() and
  **                   csInStrRev().
  ** 06.04.2021  JE    Deleted cstr_check().
+ ** 27.05.2021  JE    Adjusted var names in csIconv().
+ ** 20.09.2021  JE    Now set UTF-8 length in csMid(), too.
  *******************************************************************************/
 
 
@@ -380,11 +382,13 @@ long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
   long long c         = 0;   // Offset in Find.
 
   // Sanity checks.
-  if (llPos < 0 || llPos > llStrLen || llStrLen == 0 || llFindLen == 0) return -1;
+  if (llPos < 0 || llPos > llStrLen || llStrLen == 0 || llFindLen == 0)
+    return -1;
 
   for (i = llPos; i < llStrLen; ++i)
     if (pcFind[c++] == pcString[i]) {
-      if (c == llFindLen) return i - c + 1;
+      if (c == llFindLen)
+        return i - c + 1;
     }
     else
       c = 0;
@@ -435,7 +439,7 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
   if (llOffset > csSource.len || llLength == 0)
     return;
 
-  // Adjust length to max if it exceeds string's length or is negative.
+  // Adjust length to max if it exceeds string's length or is -1.
   if (llLength > csSource.len - llOffset || llLength == CS_MID_REST)
     llLength = csSource.len - llOffset;
 
@@ -445,9 +449,9 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
   for (long long i = 0; i < llLength; ++i)
     pcsDest->cStr[i] = csSource.cStr[llOffset + i];
 
-  // Mind the '\0'!
+  // Set string object's values and last '\0'!
   pcsDest->cStr[llLength] = '\0';
-  pcsDest->len            = llLength;
+  pcsDest->lenUtf8        = cstr_lenUtf8(pcsDest->cStr, &pcsDest->len);
   pcsDest->size           = llLength + 1;
 
   csFree(&csSource);
@@ -520,7 +524,7 @@ void csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines) {
 
   // Complete csOut's information and don't forget the '0' byte!
   pcsOut->cStr[llLen] = 0;
-  pcsOut->len         = llLen;
+  pcsOut->lenUtf8     = cstr_lenUtf8(pcsOut->cStr, &pcsOut->len);
   pcsOut->size        = llLen + 1;
 
   csFree(&csTmp);
@@ -582,24 +586,24 @@ void csSanitize(cstr* pcsLbl) {
  * Purpose: Runs lib version of `echo 'str' | iconv -f from -t to`.
  *******************************************************************************/
 int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo) {
-  size_t  tLenFrom   = pcsFromStr->size;
-  size_t  tLenTo     = pcsFromStr->size * 2; // Worst case is * 4!
+  size_t  sLenFrom   = pcsFromStr->size;
+  size_t  sLenTo     = pcsFromStr->size * 2; // Worst case is * 4!
   iconv_t tConverter = iconv_open(pcTo, pcFrom);
 
   // Check if something is to do.
-  if (tLenFrom == 0) return 1;
+  if (sLenFrom == 0) return 1;
 
   // Create dynamically allocated vars and copy their pointers for iconv().
-  char caBufFrom[tLenFrom]; char* cBufFrom = caBufFrom;
-  char caBufTo[tLenTo];     char* cBufTo   = caBufTo;
+  char caBufFrom[sLenFrom]; char* cpBufFrom = caBufFrom;
+  char caBufTo[sLenTo];     char* cpBufTo   = caBufTo;
 
   // Clear one buffer and copy string to the other.
-  for(size_t i = 0; i < tLenFrom; ++i) caBufFrom[i] = pcsFromStr->cStr[i];
-  for(size_t i = 0; i < tLenTo;   ++i) caBufTo[i]   = 0;
+  for (size_t i = 0; i < sLenFrom; ++i) caBufFrom[i] = pcsFromStr->cStr[i];
+  for (size_t i = 0; i < sLenTo;   ++i) caBufTo[i]   = 0;
 
   if (tConverter == (iconv_t) -1) return 0;
 
-  if (iconv(tConverter, &cBufFrom, &tLenFrom, &cBufTo, &tLenTo) == (size_t) -1)
+  if (iconv(tConverter, &cpBufFrom, &sLenFrom, &cpBufTo, &sLenTo) == (size_t) -1)
     return 0;
 
   csSet(pcsToStr, caBufTo);
