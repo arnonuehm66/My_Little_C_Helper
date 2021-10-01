@@ -2,7 +2,7 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.7.2
+ ** Version: v0.8.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -20,6 +20,8 @@
  ** 24.03.2020  JE    Changed 'StartPos' from 'int' to 'size_t ' in 'rxMatch()'.
  ** 27.03.2020  JE    Changed daiXXX() functions to new dasXXX().
  ** 30.03.2020  JE    Now pMatchData is freed befor every new match.
+ ** 27.05.2021  JE    Now use 'c_dynamic_arrays_macros.h'.
+ ** 27.05.2021  JE    Renamed csOptions to csFlags in rxInitMatcher().
  *******************************************************************************/
 
 
@@ -34,6 +36,7 @@
 //* includes
 
 // Add '-lpcre2-8' to the CMAKE_EXE_LINKER_FLAGS!
+#include "c_dynamic_arrays.h"
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
@@ -41,7 +44,7 @@
 #include <stdlib.h>
 
 #include "c_string.h"
-#include "c_dynamic_arrays.h"
+#include "c_dynamic_arrays_macros.h"
 
 
 //******************************************************************************
@@ -62,15 +65,18 @@
 //******************************************************************************
 //* type definition
 
+s_array(cstr);
+s_array(size_t);
+
 // Control struct for global matching.
 typedef struct s_rx_matcher {
   size_t            sPos;
   pcre2_match_data* pMatchData;
   pcre2_code*       pRegex;
   uint32_t          ui32Opts;
-  t_array_cstr      dacsMatch;
-  t_array_size      dasStart;
-  t_array_size      dasEnd;
+  t_array(cstr)     dacsMatch;
+  t_array(size_t)   dasStart;
+  t_array(size_t)   dasEnd;
 } t_rx_matcher;
 
 
@@ -82,9 +88,9 @@ typedef struct s_rx_matcher {
 //******************************************************************************
 //* public functions
 
-int  rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcFlags, cstr *pcsErr);
+int  rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcFlags, cstr* pcsErr);
 void rxFreeMatcher(t_rx_matcher* prxMatcher);
-int        rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr, size_t sCount, int *piErr, cstr *pcsErr);
+int        rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr, size_t sCount, int* piErr, cstr* pcsErr);
 
 
 //******************************************************************************
@@ -93,12 +99,12 @@ int        rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSea
 /*******************************************************************************
  * Name: rxInitMatcher
  *******************************************************************************/
-int rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcFlags, cstr *pcsErr) {
-  cstr       csOPtions = csNew(pcFlags);
-  cstr       csRegex   = csNew(pcRegex);
-  int        iErr      = RX_NO_ERROR;
-  int        iErrNo    = 0;
-  PCRE2_SIZE iErrOff   = 0;
+int rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcFlags, cstr* pcsErr) {
+  cstr       csFlags = csNew(pcFlags);
+  cstr       csRegex = csNew(pcRegex);
+  int        iErr    = RX_NO_ERROR;
+  int        iErrNo  = 0;
+  PCRE2_SIZE iErrOff = 0;
 
   prxMatcher->sPos       = 0;
   prxMatcher->pMatchData = NULL;
@@ -106,17 +112,17 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcF
   prxMatcher->ui32Opts   = 0;
 
   // Init cstr and int arrays, which holds all matches and offsets.
-  dacsInit(&prxMatcher->dacsMatch);
-  dasInit(&prxMatcher->dasStart);
-  dasInit(&prxMatcher->dasEnd);
+  daInit(cstr, prxMatcher->dacsMatch);
+  daInit(size_t, prxMatcher->dasStart);
+  daInit(size_t, prxMatcher->dasEnd);
 
   // Convert option string into options and init everything to work global.
   // Because PCRE2_EXTENDED don't work, I use the implicit form '(?x:...)'.
-  for (int i = 0; i < csOPtions.len; ++i) {
-    if (csOPtions.cStr[i] == 'x') csSetf(&csRegex, "(?x:%s)", csRegex.cStr);
-    if (csOPtions.cStr[i] == 'i') prxMatcher->ui32Opts |= PCRE2_CASELESS;
-    if (csOPtions.cStr[i] == 'm') prxMatcher->ui32Opts |= PCRE2_MULTILINE;
-    if (csOPtions.cStr[i] == 's') prxMatcher->ui32Opts |= PCRE2_DOTALL;
+  for (int i = 0; i < csFlags.len; ++i) {
+    if (csFlags.cStr[i] == 'x') csSetf(&csRegex, "(?x:%s)", csRegex.cStr);
+    if (csFlags.cStr[i] == 'i') prxMatcher->ui32Opts |= PCRE2_CASELESS;
+    if (csFlags.cStr[i] == 'm') prxMatcher->ui32Opts |= PCRE2_MULTILINE;
+    if (csFlags.cStr[i] == 's') prxMatcher->ui32Opts |= PCRE2_DOTALL;
   }
 
   // Compile regex
@@ -137,7 +143,7 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcF
     iErr = RX_ERROR;
   }
 
-  csFree(&csOPtions);
+  csFree(&csFlags);
   csFree(&csRegex);
 
   return iErr;
@@ -149,9 +155,9 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcF
 void rxFreeMatcher(t_rx_matcher* prxMatcher) {
   pcre2_match_data_free(prxMatcher->pMatchData);
   pcre2_code_free(prxMatcher->pRegex);
-  dacsFree(&prxMatcher->dacsMatch);
-  dasFree(&prxMatcher->dasStart);
-  dasFree(&prxMatcher->dasEnd);
+  daFreeEx(prxMatcher->dacsMatch, cStr);
+  daFree(prxMatcher->dasStart);
+  daFree(prxMatcher->dasEnd);
 }
 
 /*******************************************************************************
@@ -228,9 +234,9 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
   //****************************************************************************
 
   psOvector = pcre2_get_ovector_pointer(prxMatcher->pMatchData);
-  dacsClear(&prxMatcher->dacsMatch);
-  dasClear(&prxMatcher->dasStart);
-  dasClear(&prxMatcher->dasEnd);
+  daClearEx(cstr, prxMatcher->dacsMatch, cStr);
+  daClear(size_t, prxMatcher->dasStart);
+  daClear(size_t, prxMatcher->dasEnd);
 
   for (int i = 0; i < iMatchCount; ++i) {
     iStart = 2 * i;       // Next even index.
@@ -241,12 +247,12 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
     sSubStrLen = psOvector[iEnd] - psOvector[iStart];
 
     // ... save start and end offsets in dynamic arrays, too ...
-    dasAdd(&prxMatcher->dasStart, psOvector[iStart]);
-    dasAdd(&prxMatcher->dasEnd,   psOvector[iEnd]);
+    daAdd(size_t, prxMatcher->dasStart, psOvector[iStart]);
+    daAdd(size_t, prxMatcher->dasEnd,   psOvector[iEnd]);
 
     // ... and add it to the dynamic array via temporary cstr.
     csSetf(&csSubStr, "%.*s", sSubStrLen, pcSubStr);
-    dacsAdd(&prxMatcher->dacsMatch, csSubStr.cStr);
+    daAdd(cstr, prxMatcher->dacsMatch, csNew(csSubStr.cStr));
   }
 
   // Store end of complete match as pos().
