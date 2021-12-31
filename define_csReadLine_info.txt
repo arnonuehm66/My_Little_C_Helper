@@ -4,6 +4,13 @@
 
 und
 
+ ** Version: v0.20.1
+ ** 14.12.2021  JE    Added csReadLine().
+
+int         csReadLine(cstr* pcsLine, FILE* hFile);
+void        csSanitize(cstr* pcsLbl);
+
+
 //*******************************************************************************
 //* Name:  csReadLine
 //* Purpose: Reads a text line from file into a cstr object.
