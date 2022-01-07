@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.9.5
+ ** Version: v0.10.5
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -24,6 +24,11 @@
  ** 05.04.2021  JE    Now uses 'csInStrRev()' from 'c_string.h' v0.18.3.
  ** 25.03.2021  JE    Added '#define prtVarUInt(var)'.
  ** 19.04.2021  JE    Changed 'prtHey()' to 'prtLn(str)'.
+ ** 28.10.2021  JE    Added getArgHexInt() and getArgInt().
+ ** 03.11.2021  JE    Now getArg*Int() uses getArg*Long().
+ ** 03.11.2021  JE    Changed if- to switch-statement in getHexLongParm().
+ ** 11.11.2021  JE    Improved prtHl() and prtVar*() #defines.
+ ** 11.11.2021  JE    Got rid of memory leak in getMename().
  *******************************************************************************/
 
 
@@ -36,7 +41,7 @@
 #include <stdint.h>       // For uint8_t, etc. typedefs.
 #include <sys/stat.h>     // for fstat to get file size.
 
-// For IDE convienience.
+// For IDE convenience.
 #include "c_string.h"
 
 
@@ -58,12 +63,9 @@
 #define ARG_CLI 0x01
 
 // Debug prints
-#define prtVarStr(var)  printf("%s = %s\n", #var, var)
-#define prtVarInt(var)  printf("%s = %ld\n", #var, var)
-#define prtVarUInt(var) printf("%s = %lu\n", #var, var)
-#define prtVarDbl(var)  printf("%s = %f\n", #var, var)
-#define prtHl(n) {for(int i=0;i<n;++i){printf("-");}printf("\n");}
-#define prtLn(str) printf("str\n");
+#define prtVar(f,v) printf("%s = " f "\n", #v, v)
+#define prtHl(c,n)  {for(int hjklm = 0; hjklm < n; ++hjklm) printf(c); printf("\n");}
+#define prtLn(str)  printf("str\n")
 
 
 //******************************************************************************
@@ -113,6 +115,8 @@ void getMename(cstr* pcsMename, const char* argv0) {
   else {
     csSet(pcsMename, argv0);
   }
+
+  csFree(&csRest);
 }
 
 /*******************************************************************************
@@ -192,12 +196,15 @@ ll getHexLongParm(cstr csParm, int* piErr) {
   if (!strcmp(csPre.cStr, "0x")) fHex = 1;
 
   // Calc possible multiplier from integer postfix.
-  if (csPost.cStr[0] == 'k') iPost = 1024;
-  if (csPost.cStr[0] == 'K') iPost = 1024;
-  if (csPost.cStr[0] == 'm') iPost = 1024 * 1024;
-  if (csPost.cStr[0] == 'M') iPost = 1024 * 1024;
-  if (csPost.cStr[0] == 'g') iPost = 1024 * 1024 * 1024;
-  if (csPost.cStr[0] == 'G') iPost = 1024 * 1024 * 1024;
+  // Switch without break to fall throught the right number of multiplies.
+  switch (csPost.cStr[0]) {
+    case 'g': case 'G':
+      iPost *= 1024;
+    case 'm': case 'M':
+      iPost *= 1024;
+    case 'k': case 'K':
+      iPost *= 1024;
+  }
 
   // Hex or integer
   if (fHex == 1)
@@ -234,7 +241,7 @@ int getArgStr(cstr* pcsRv, int* piArg, int argc, char** argv, int bShift, const 
 
 /*******************************************************************************
  * Name:  getArgHexLong
- * Purpose: Reads an hex integer from cli or a value and returns it.
+ * Purpose: Reads an hex long integer from cli or a value and returns it.
  *******************************************************************************/
 int getArgHexLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
   cstr csRv = csNew("");
@@ -253,8 +260,21 @@ int getArgHexLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, cons
 }
 
 /*******************************************************************************
+ * Name:  getArgHexInt
+ * Purpose: Reads an hex integer from cli or a value and returns it.
+ *******************************************************************************/
+int getArgHexInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
+  ll  llRv = 0;
+  int iRet = 0;
+
+  iRet = getArgHexLong(&llRv, piArg, argc, argv, bShift, pcVal);
+  *piRv = (int) llRv;
+  return iRet;
+}
+
+/*******************************************************************************
  * Name:  getArgLong
- * Purpose: Reads an integer from cli or a value and returns it.
+ * Purpose: Reads an long integer from cli or a value and returns it.
  *******************************************************************************/
 int getArgLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
   cstr csRv  = csNew("");
@@ -270,6 +290,19 @@ int getArgLong(ll* pllRv, int* piArg, int argc, char** argv, int bShift, const c
 
   csFree(&csRv);
   return 1;
+}
+
+/*******************************************************************************
+ * Name:  getArgInt
+ * Purpose: Reads an integer from cli or a value and returns it.
+ *******************************************************************************/
+int getArgInt(int* piRv, int* piArg, int argc, char** argv, int bShift, const char* pcVal) {
+  ll  llRv = 0;
+  int iRet = 0;
+
+  iRet = getArgLong(&llRv, piArg, argc, argv, bShift, pcVal);
+  *piRv = (int) llRv;
+  return iRet;
 }
 
 /*******************************************************************************

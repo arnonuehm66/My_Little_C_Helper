@@ -75,9 +75,9 @@
 //*
 //*   daInit(cstr, myDa);
 //*
-//*   daAdd(cstr, my_dacs, csNew("Eins"));
-//*   daAdd(cstr, my_dacs, csNew("Zwei"));
-//*   daAdd(cstr, my_dacs, csNew("Drei"));
+//*   daAdd(cstr, myDa, csNew("Eins"));
+//*   daAdd(cstr, myDa, csNew("Zwei"));
+//*   daAdd(cstr, myDa, csNew("Drei"));
 //*
 //* Last argument is the name of the internal pointer (one level beyond)
 //* to be freed prior dynamic array pointer.

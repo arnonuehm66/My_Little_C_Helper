@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.19.1
+ ** Version: v0.20.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -62,6 +62,10 @@
  ** 06.04.2021  JE    Deleted cstr_check().
  ** 27.05.2021  JE    Adjusted var names in csIconv().
  ** 20.09.2021  JE    Now set UTF-8 length in csMid(), too.
+ ** 11.11.2021  JE    Now csSplitPos() returns 1 on success, else 0.
+ ** 14.12.2021  JE    Added csReadLine().
+ ** 04.01.2022  JE    Adjusted error checking in csIconv().
+ ** 04.01.2022  JE    Now converter is closed when ivconv() returnes an error.
  *******************************************************************************/
 
 
@@ -138,10 +142,11 @@ void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
 long long   csInStr(long long llPos, const char* pcString, const char* pcFind);
 long long   csInStrRev(long long llPos, const char* pcString, const char* pcFind);
 void        csMid(cstr* pcsDest, const char *pcSource, long long llOffset, long long llLength);
-long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char *pcString, const char *pcSplitAt);
+long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt);
 int         csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcString, long long llWidth);
 void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
 int         csInput(const char* pcMsg, cstr* pcsDest);
+int         csReadLine(cstr* pcsLine, FILE* hFile);
 void        csSanitize(cstr* pcsLbl);
 int         csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo);
 int         csIsUtf8(const char* pcString);
@@ -269,7 +274,7 @@ cstr csNew(const char* pcString) {
   long long llUlen  = cstr_lenUtf8(pcString, &llClen);
   long long llCsize = 0;
 
-  // Includes '\0'.
+  // Include '\0'.
   llCsize = llClen + 1;
 
   cstr_init(&csOut);
@@ -327,7 +332,7 @@ void csSet(cstr* pcsString, const char* pcString) {
 
 /*******************************************************************************
  * Name: csSetf
- * Purpose: Sets new string in cstr object like sprintf() .
+ * Purpose: Sets new string in cstr object like sprintf().
  *******************************************************************************/
 void csSetf(cstr* pcsString, const char* pcFormat, ...) {
   va_list args1;    // Needs two dynamic args pointer because after first use
@@ -485,9 +490,9 @@ int csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcStr
   if (llPos >= 0 && llPos <= llStringLen && llWidth >= 0 && llWidth <= llStringLen) {
     csMid(pcsLeft,  pcString,               0,       llPos);
     csMid(pcsRight, pcString, llPos + llWidth, CS_MID_REST);
-    return 0;
+    return 1;
   }
-  return 1;
+  return 0;
 }
 
 /*******************************************************************************
@@ -561,6 +566,27 @@ int csInput(const char* pcMsg, cstr* pcsDest) {
 }
 
 //*******************************************************************************
+//* Name:  csReadLine
+//* Purpose: Reads a text line from file into a cstr object.
+//*******************************************************************************
+int csReadLine(cstr* pcsLine, FILE* hFile) {
+  int iChar = 0;
+
+  csSet(pcsLine, "");
+
+  while (1) {
+    iChar = fgetc(hFile);
+
+    if (iChar ==  EOF) return 0;
+    if (iChar == '\n') return 1;
+
+    csCat(pcsLine, pcsLine->cStr, (char*) &iChar);
+  }
+
+  return 0;
+}
+
+//*******************************************************************************
 //* Name:  csSanitize
 //* Purpose: Deletes all non printable chars lower than 0x20.
 //*******************************************************************************
@@ -589,9 +615,11 @@ int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pc
   size_t  sLenFrom   = pcsFromStr->size;
   size_t  sLenTo     = pcsFromStr->size * 2; // Worst case is * 4!
   iconv_t tConverter = iconv_open(pcTo, pcFrom);
+  int     iRetVal    = 1;
 
   // Check if something is to do.
-  if (sLenFrom == 0) return 1;
+  if (tConverter == (iconv_t) -1) return 0;
+  if (sLenFrom   ==            0) return 1;
 
   // Create dynamically allocated vars and copy their pointers for iconv().
   char caBufFrom[sLenFrom]; char* cpBufFrom = caBufFrom;
@@ -601,16 +629,17 @@ int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pc
   for (size_t i = 0; i < sLenFrom; ++i) caBufFrom[i] = pcsFromStr->cStr[i];
   for (size_t i = 0; i < sLenTo;   ++i) caBufTo[i]   = 0;
 
-  if (tConverter == (iconv_t) -1) return 0;
-
-  if (iconv(tConverter, &cpBufFrom, &sLenFrom, &cpBufTo, &sLenTo) == (size_t) -1)
-    return 0;
+  if (iconv(tConverter, &cpBufFrom, &sLenFrom, &cpBufTo, &sLenTo) == (size_t) -1) {
+    iRetVal = 0;
+    goto close_and_exit;
+  }
 
   csSet(pcsToStr, caBufTo);
 
+close_and_exit:
   iconv_close(tConverter);
 
-  return 1;
+  return iRetVal;
 }
 
 /*******************************************************************************

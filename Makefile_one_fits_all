@@ -1,5 +1,5 @@
 # Preliminaries:
-NAME = extreme1-38
+NAME = skeleton_main_c
 
 CC       = clang
 CFLAGS   = -Wall -Ofast -DNDEBUG

@@ -56,6 +56,8 @@
  ** 05.02.2021  JE    Added '-p' for printing progress to stderr.
  ** 05.02.2021  JE    Changed all long to size_t.
  ** 19.04.2021  JE    Now use dynamic-array-macros.
+ ** 30.11.2021  JE    Added csFree() in main() for all global cstr vars.
+ ** 30.11.2021  JE    Added freeEntry().
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -80,7 +82,7 @@
 //******************************************************************************
 //* defines & macros
 
-#define ME_VERSION "0.0.51"
+#define ME_VERSION "0.0.53"
 cstr g_csMename;
 
 #define ERR_NOERR 0x00
@@ -251,6 +253,16 @@ void initEntry() {
   g_tE.tcLat.ldlVal = 0.0;
   g_tE.tcLat.csVal  = csNew("-");
   g_tE.csLbl        = csNew("");
+}
+
+/*******************************************************************************
+ * Name:  freeEntry
+ * Purpose: Frees entry's cstr vars.
+ *******************************************************************************/
+void freeEntry() {
+  csFree(&g_tE.tcLon.csVal);
+  csFree(&g_tE.tcLat.csVal);
+  csFree(&g_tE.csLbl);
 }
 
 /*******************************************************************************
@@ -712,6 +724,7 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
 
   // Free memory of all used structs.
 free_and_exit:
+  csFree(&csErr);
   rxFreeMatcher(&rxMatcher);
 }
 
@@ -747,7 +760,6 @@ void debug(void) {
   cstr csRx       = csNew("");
   cstr csTest     = csNew("abcd");
   cstr csDateTime = csNew("");
-
 
   printCsInternals(&csTest);
 
@@ -808,8 +820,6 @@ void debug(void) {
   csFree(&csRx);
   csFree(&csTest);
   csFree(&csDateTime);
-
-  exit(0);
 }
 
 /*******************************************************************************
@@ -883,7 +893,9 @@ int main(int argc, char *argv[]) {
   initGlobalRegexes();
   initTimeFunctions();
 
-  debug();  // Delete, when debugging is finished.
+  // Delete, when debugging is finished.
+  debug(); goto free_and_exit;
+  // Delete, when debugging is finished.
 
   printHeader();
 
@@ -917,9 +929,15 @@ int main(int argc, char *argv[]) {
     fclose(hFile);
   }
 
+free_and_exit:
   // Free all used memory, prior end of program.
-  csFree(&csErr);
   daFreeEx(g_tArgs, cStr);
+  csFree(&csErr);
+  csFree(&g_tOpts.csOptX);
+  csFree(&g_tOpts.csRx);
+  csFree(&g_tOpts.csRxF);
+  csFree(&g_tOpts.csDateTime);
+  csFree(&g_csMename);
   freeRxStructs();
 
   return ERR_NOERR;
