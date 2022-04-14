@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.20.3
+ ** Version: v0.20.4
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -17,7 +17,7 @@
  ** 15.02.2018  JE    Added a few csClear() to removed memory leaks.
  ** 22.02.2018  JE    Added csFree() for freeing memory.
  ** 22.02.2018  JE    Changed csClear() to reset string to "".
- ** 29.04.2018  JE    Added csInput() for a convieneient string input 'box'.
+ ** 29.04.2018  JE    Added csInput() for a convienient string input 'box'.
  ** 29.05.2018  JE    Added csTrim(), strips leading and trailing whitespaces.
  ** 29.05.2018  JE    Added cstr_check_if_whitespace() as helper for csTrim().
  ** 28.08.2018  JE    Added csHhex2ll() and ll2csHhex().
@@ -29,7 +29,7 @@
  ** 07.03.2019  JE    Now structs are all named.
  ** 23.04.2019  JE    Minor corrections and optimisations.
  ** 14.05.2019  JE    Changed interface of csTrim().
- ** 14.05.2019  JE    Fixed two offset-by-one bugs in csTrim().
+ ** 14.05.2019  JE    Fixed two off-by-one bugs in csTrim().
  ** 14.05.2019  JE    Added 'csTmp' in 'csTrim()', because 'pcString' could be
  **                   a copy of 'pcsOut.cStr', and therefore been cleared
  **                   prior usage!
@@ -65,7 +65,8 @@
  ** 11.11.2021  JE    Now csSplitPos() returns 1 on success, else 0.
  ** 14.12.2021  JE    Added csReadLine().
  ** 04.01.2022  JE    Adjusted error checking in csIconv().
- ** 04.01.2022  JE    Now converter is closed when ivconv() returnes an error.
+ ** 04.01.2022  JE    Now converter is closed when iconv() returnes an error.
+ ** 13.04.2022  JE    Added error handling in csReadLine().
  *******************************************************************************/
 
 
@@ -123,8 +124,8 @@ typedef struct s_cstr {
 static void      cstr_init(cstr* pcString);
 static void      cstr_double_capacity_if_full(cstr* pcString, long long llSize);
 static int       cstr_utf8_cont(const char c);
-static int       cstr_utf8_bytes(const char *c);
-static long long cstr_lenUtf8(const char* pcString, long long *pLen);
+static int       cstr_utf8_bytes(const char* c);
+static long long cstr_lenUtf8(const char* pcString, long long* pLen);
 static long long cstr_len(const char* pcString);
 static int       cstr_check_if_whitespace(const char cChar, int bWithNewLines);
 
@@ -141,7 +142,7 @@ void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
 long long   csInStr(long long llPos, const char* pcString, const char* pcFind);
 long long   csInStrRev(long long llPos, const char* pcString, const char* pcFind);
-void        csMid(cstr* pcsDest, const char *pcSource, long long llOffset, long long llLength);
+void        csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long llLength);
 long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt);
 int         csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcString, long long llWidth);
 void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
@@ -167,7 +168,8 @@ long long   csHex2ll(cstr csValue);
  * Name: cstr_init
  *******************************************************************************/
 static void cstr_init(cstr* pcString) {
-  if (pcString->cStr != NULL) free(pcString->cStr);
+  if (pcString->cStr != NULL)
+    free(pcString->cStr);
   pcString->len      = 0;
   pcString->lenUtf8  = 0;
   pcString->size     = 1;
@@ -181,10 +183,12 @@ static void cstr_init(cstr* pcString) {
  *******************************************************************************/
 static void cstr_double_capacity_if_full(cstr* pcString, long long llSize) {
   // Avoid unnecessary reallocations.
-  if (pcString->size + llSize <= pcString->capacity) return;
+  if (pcString->size + llSize <= pcString->capacity)
+    return;
 
   // Increase capacity until new size fits.
-  while (pcString->size + llSize > pcString->capacity) pcString->capacity *= 2;
+  while (pcString->size + llSize > pcString->capacity)
+    pcString->capacity *= 2;
 
   // Reallocate new memory.
   pcString->cStr = (char*) realloc(pcString->cStr, sizeof(char) * pcString->capacity);
@@ -201,19 +205,23 @@ static int cstr_utf8_cont(const char c) {
  * Name: cstr_utf8_bytes
  *******************************************************************************/
 static int cstr_utf8_bytes(const char* c) {
-  if ((c[0] & 0x80) == 0x00) return 1;
+  if ((c[0] & 0x80) == 0x00)
+    return 1;
 
   if ((c[0] & 0xe0) == 0xc0 &&
-       cstr_utf8_cont(c[1])) return 2;
+       cstr_utf8_cont(c[1]))
+    return 2;
 
   if ((c[0] & 0xf0) == 0xe0 &&
        cstr_utf8_cont(c[1]) &&
-       cstr_utf8_cont(c[2])) return 3;
+       cstr_utf8_cont(c[2]))
+    return 3;
 
   if ((c[0] & 0xf8) == 0xf0 &&
        cstr_utf8_cont(c[1]) &&
        cstr_utf8_cont(c[2]) &&
-       cstr_utf8_cont(c[3])) return 4;
+       cstr_utf8_cont(c[3]))
+    return 4;
 
   return 0;
 }
@@ -227,7 +235,8 @@ static long long cstr_lenUtf8(const char* pcString, long long* pLen) {
 
   // UTF char is counted if it not continues.
   while (pcString[*pLen] != '\0') {
-    if (!cstr_utf8_cont(pcString[*pLen])) ++(lenUtf8);
+    if (!cstr_utf8_cont(pcString[*pLen]))
+      ++(lenUtf8);
     ++(*pLen);
   }
   return lenUtf8;
@@ -238,7 +247,8 @@ static long long cstr_lenUtf8(const char* pcString, long long* pLen) {
  *******************************************************************************/
 static long long cstr_len(const char* pcString) {
   int i = 0;
-  while (pcString[i] != '\0') ++i;
+  while (pcString[i] != '\0')
+    ++i;
   return i;
 }
 
@@ -248,10 +258,12 @@ static long long cstr_len(const char* pcString) {
 static int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
   if (bWithNewLines) {
     if (cChar == ' '  || cChar == '\t' ||
-        cChar == '\n' || cChar == '\r') return 1;
+        cChar == '\n' || cChar == '\r')
+      return 1;
   }
   else
-    if (cChar == ' '  || cChar == '\t') return 1;
+    if (cChar == ' '  || cChar == '\t')
+      return 1;
 
   return 0;
 }
@@ -306,7 +318,8 @@ void csClear(cstr* pcsString) {
  * Purpose: Deletes cstr object and frees memory used.
  *******************************************************************************/
 void csFree(cstr* pcsString) {
-  if (pcsString->cStr != NULL) free(pcsString->cStr);
+  if (pcsString->cStr != NULL)
+    free(pcsString->cStr);
   pcsString->len      = 0;
   pcsString->lenUtf8  = 0;
   pcsString->size     = 0;
@@ -388,7 +401,7 @@ long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
 
   // Sanity checks.
   if (llPos < 0 || llPos > llStrLen || llStrLen == 0 || llFindLen == 0)
-    return -1;
+    return CS_NOT_FOUND;
 
   for (i = llPos; i < llStrLen; ++i)
     if (pcFind[c++] == pcString[i]) {
@@ -557,7 +570,8 @@ int csInput(const char* pcMsg, cstr* pcsDest) {
     }
 
     // Take care of the '\n'.
-    if ((char) iChar == '\n') return 1;
+    if ((char) iChar == '\n')
+      return 1;
 
     // Create a minute string of one char.
     acChar[0] = (char) iChar;
@@ -577,8 +591,14 @@ int csReadLine(cstr* pcsLine, FILE* hFile) {
   while (1) {
     iChar = fgetc(hFile);
 
-    if (iChar ==  EOF) return 0;
-    if (iChar == '\n') return 1;
+    if (ferror(hFile)) {
+      clearerr(hFile);
+      return 0;
+    }
+    if (iChar ==  EOF)
+      return 1;
+    if (iChar == '\n')
+      return 1;
 
     csCat(pcsLine, pcsLine->cStr, (char*) &iChar);
   }
@@ -618,16 +638,24 @@ int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pc
   int     iRetVal    = 1;
 
   // Check if something is to do.
-  if (tConverter == (iconv_t) -1) return 0;
-  if (sLenFrom   ==            0) return 1;
+  if (tConverter == (iconv_t) -1)
+    return 0;
+  if (sLenFrom   ==            0)
+    return 1;
 
   // Create dynamically allocated vars and copy their pointers for iconv().
-  char caBufFrom[sLenFrom]; char* cpBufFrom = caBufFrom;
-  char caBufTo[sLenTo];     char* cpBufTo   = caBufTo;
+  char  caBufFrom[sLenFrom];
+  char* cpBufFrom = caBufFrom;
+  char  caBufTo[sLenTo];
+  char* cpBufTo   = caBufTo;
 
-  // Clear one buffer and copy string to the other.
-  for (size_t i = 0; i < sLenFrom; ++i) caBufFrom[i] = pcsFromStr->cStr[i];
-  for (size_t i = 0; i < sLenTo;   ++i) caBufTo[i]   = 0;
+  // Clear one buffer ...
+  for (size_t i = 0; i < sLenFrom; ++i)
+    caBufFrom[i] = pcsFromStr->cStr[i];
+
+  // ... and copy string to the other.
+  for (size_t i = 0; i < sLenTo; ++i)
+    caBufTo[i] = 0;
 
   if (iconv(tConverter, &cpBufFrom, &sLenFrom, &cpBufTo, &sLenTo) == (size_t) -1) {
     iRetVal = 0;
@@ -650,7 +678,8 @@ int csIsUtf8(const char* pcString) {
   long long len     = 0;
   long long lenUtf8 = cstr_lenUtf8(pcString, &len);
 
-  if (len != lenUtf8) return 1;
+  if (len != lenUtf8)
+    return 1;
   return 0;
 }
 
@@ -780,7 +809,8 @@ long long csHex2ll(cstr csValue) {
 
   // Delete possible '0x' prior conversion.
   csMid(&csPre, csHex.cStr, 0, 2);
-  if (!strcmp(csPre.cStr, "0x")) csMid(&csHex, csHex.cStr, 2, -1);
+  if (!strcmp(csPre.cStr, "0x"))
+    csMid(&csHex, csHex.cStr, 2, CS_MID_REST);
 
   llVal = strtoll(csHex.cStr, NULL, 16);
 
