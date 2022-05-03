@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.20.4
+ ** Version: v0.20.5
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -67,6 +67,7 @@
  ** 04.01.2022  JE    Adjusted error checking in csIconv().
  ** 04.01.2022  JE    Now converter is closed when iconv() returnes an error.
  ** 13.04.2022  JE    Added error handling in csReadLine().
+ ** 19.04.2022  JE    Removed hacky int to char* conversion in csReadLine().
  *******************************************************************************/
 
 
@@ -584,7 +585,8 @@ int csInput(const char* pcMsg, cstr* pcsDest) {
 //* Purpose: Reads a text line from file into a cstr object.
 //*******************************************************************************
 int csReadLine(cstr* pcsLine, FILE* hFile) {
-  int iChar = 0;
+  int  iChar     = 0;
+  char acChar[2] = {0};
 
   csSet(pcsLine, "");
 
@@ -595,12 +597,14 @@ int csReadLine(cstr* pcsLine, FILE* hFile) {
       clearerr(hFile);
       return 0;
     }
-    if (iChar ==  EOF)
-      return 1;
     if (iChar == '\n')
       return 1;
+    if (iChar ==  EOF)
+      return 1;
 
-    csCat(pcsLine, pcsLine->cStr, (char*) &iChar);
+    // Create a minute string of one char.
+    acChar[0] = (char) iChar;
+    csCat(pcsLine, pcsLine->cStr, acChar);
   }
 
   return 0;
