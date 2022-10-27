@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.10.5
+ ** Version: v0.10.7
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -24,11 +24,13 @@
  ** 05.04.2021  JE    Now uses 'csInStrRev()' from 'c_string.h' v0.18.3.
  ** 25.03.2021  JE    Added '#define prtVarUInt(var)'.
  ** 19.04.2021  JE    Changed 'prtHey()' to 'prtLn(str)'.
- ** 28.10.2021  JE    Added getArgHexInt() and getArgInt().
- ** 03.11.2021  JE    Now getArg*Int() uses getArg*Long().
- ** 03.11.2021  JE    Changed if- to switch-statement in getHexLongParm().
- ** 11.11.2021  JE    Improved prtHl() and prtVar*() #defines.
- ** 11.11.2021  JE    Got rid of memory leak in getMename().
+ ** 28.10.2021  JE    Added 'getArgHexInt()' and 'getArgInt()'.
+ ** 03.11.2021  JE    Now 'getArg*Int()' uses 'getArg*Long()'.
+ ** 03.11.2021  JE    Changed if- to switch-statement in 'getHexLongParm()'.
+ ** 11.11.2021  JE    Improved 'prtHl()' and 'prtVar*()' '#defines'.
+ ** 11.11.2021  JE    Got rid of memory leak in 'getMename()'.
+ ** 01.07.2022  JE    Shortened switch with 'toupper()' in 'getHexLongParm()'.
+ ** 25.07.2022  JE    Added '#define arraySize(arr)' to get elements count.
  *******************************************************************************/
 
 
@@ -40,6 +42,7 @@
 #include <endian.h>       // To get __LITTLE_ENDIAN.
 #include <stdint.h>       // For uint8_t, etc. typedefs.
 #include <sys/stat.h>     // for fstat to get file size.
+#include <ctype.h>        // for toupper().
 
 // For IDE convenience.
 #include "c_string.h"
@@ -61,6 +64,9 @@
 // getArg*()
 #define ARG_VAL 0x00
 #define ARG_CLI 0x01
+
+// Convenience macros
+#define arraySize(arr) (sizeof(arr) / sizeof(arr[0]))
 
 // Debug prints
 #define prtVar(f,v) printf("%s = " f "\n", #v, v)
@@ -196,14 +202,11 @@ ll getHexLongParm(cstr csParm, int* piErr) {
   if (!strcmp(csPre.cStr, "0x")) fHex = 1;
 
   // Calc possible multiplier from integer postfix.
-  // Switch without break to fall throught the right number of multiplies.
-  switch (csPost.cStr[0]) {
-    case 'g': case 'G':
-      iPost *= 1024;
-    case 'm': case 'M':
-      iPost *= 1024;
-    case 'k': case 'K':
-      iPost *= 1024;
+  // Switch without break to fall throught the right number of multiplications.
+  switch (toupper(csPost.cStr[0])) {
+    case 'G': iPost *= 1024;
+    case 'M': iPost *= 1024;
+    case 'K': iPost *= 1024;
   }
 
   // Hex or integer
