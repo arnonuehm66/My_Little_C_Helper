@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.20.5
+ ** Version: v0.20.6
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -68,6 +68,8 @@
  ** 04.01.2022  JE    Now converter is closed when iconv() returnes an error.
  ** 13.04.2022  JE    Added error handling in csReadLine().
  ** 19.04.2022  JE    Removed hacky int to char* conversion in csReadLine().
+ ** 25.11.2022  JE    Now free char pointer without check for NULL.
+ ** 25.11.2022  JE    Simplify checks in cstr_check_if_whitespace().
  *******************************************************************************/
 
 
@@ -169,8 +171,7 @@ long long   csHex2ll(cstr csValue);
  * Name: cstr_init
  *******************************************************************************/
 static void cstr_init(cstr* pcString) {
-  if (pcString->cStr != NULL)
-    free(pcString->cStr);
+  free(pcString->cStr);
   pcString->len      = 0;
   pcString->lenUtf8  = 0;
   pcString->size     = 1;
@@ -257,15 +258,8 @@ static long long cstr_len(const char* pcString) {
  * Name: cstr_check_if_whitespace
  *******************************************************************************/
 static int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
-  if (bWithNewLines) {
-    if (cChar == ' '  || cChar == '\t' ||
-        cChar == '\n' || cChar == '\r')
-      return 1;
-  }
-  else
-    if (cChar == ' '  || cChar == '\t')
-      return 1;
-
+  if                   (cChar == ' '  || cChar == '\t')  return 1;
+  if (bWithNewLines && (cChar == '\n' || cChar == '\r')) return 1;
   return 0;
 }
 
@@ -319,8 +313,7 @@ void csClear(cstr* pcsString) {
  * Purpose: Deletes cstr object and frees memory used.
  *******************************************************************************/
 void csFree(cstr* pcsString) {
-  if (pcsString->cStr != NULL)
-    free(pcsString->cStr);
+  free(pcsString->cStr);
   pcsString->len      = 0;
   pcsString->lenUtf8  = 0;
   pcsString->size     = 0;
