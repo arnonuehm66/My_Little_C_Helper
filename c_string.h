@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.20.6
+ ** Version: v0.20.7
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -34,7 +34,7 @@
  **                   a copy of 'pcsOut.cStr', and therefore been cleared
  **                   prior usage!
  ** 06.06.2019  JE    Added lenUtf8 in struct, cstr_utf8_conts(),
- **                   cstr_utf8_bytes() and cstr_lenUtf8().
+ **                   cstr_utf8_bytes() and cstr_len_utf8_char().
  ** 06.06.2019  JE    Added csIsUtf8(), csAt() and csAtUtf8().
  ** 11.06.2019  JE    Changed all positions and length ints into size_t.
  ** 07.08.2019  JE    Changed all pos and off from size_t to long long in csMid.
@@ -70,6 +70,7 @@
  ** 19.04.2022  JE    Removed hacky int to char* conversion in csReadLine().
  ** 25.11.2022  JE    Now free char pointer without check for NULL.
  ** 25.11.2022  JE    Simplify checks in cstr_check_if_whitespace().
+ ** 25.12.20200 JE    Fixed csInStrRev() logic error where pos will end.
  *******************************************************************************/
 
 
@@ -128,7 +129,7 @@ static void      cstr_init(cstr* pcString);
 static void      cstr_double_capacity_if_full(cstr* pcString, long long llSize);
 static int       cstr_utf8_cont(const char c);
 static int       cstr_utf8_bytes(const char* c);
-static long long cstr_lenUtf8(const char* pcString, long long* pLen);
+static long long cstr_len_utf8_char(const char* pcString, long long* pLen);
 static long long cstr_len(const char* pcString);
 static int       cstr_check_if_whitespace(const char cChar, int bWithNewLines);
 
@@ -144,7 +145,7 @@ void        csSet(cstr* pcsString, const char* pcString);
 void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
 long long   csInStr(long long llPos, const char* pcString, const char* pcFind);
-long long   csInStrRev(long long llPos, const char* pcString, const char* pcFind);
+long long   csInStrRev(long long llPosMax, const char* pcString, const char* pcFind);
 void        csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long llLength);
 long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt);
 int         csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcString, long long llWidth);
@@ -229,9 +230,9 @@ static int cstr_utf8_bytes(const char* c) {
 }
 
 /*******************************************************************************
- * Name: cstr_lenUtf8
+ * Name: cstr_len_utf8_char
  *******************************************************************************/
-static long long cstr_lenUtf8(const char* pcString, long long* pLen) {
+static long long cstr_len_utf8_char(const char* pcString, long long* pLen) {
   long long lenUtf8 = 0;
            *pLen    = 0;
 
@@ -278,7 +279,7 @@ static int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
 cstr csNew(const char* pcString) {
   cstr      csOut   = {0};
   long long llClen  = 0;
-  long long llUlen  = cstr_lenUtf8(pcString, &llClen);
+  long long llUlen  = cstr_len_utf8_char(pcString, &llClen);
   long long llCsize = 0;
 
   // Include '\0'.
@@ -370,7 +371,7 @@ void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
   // Make room for the second string.
   cstr_double_capacity_if_full(&csOut, csAdd.size);
 
-  // Now append pChars over csChr's '\0' including pChars's '\0'.
+  // Now append psAdd over csOut's '\0' including psAdd's '\0'.
   for(long long i = 0; i < csAdd.size; ++i)
     csOut.cStr[csOut.len + i] = pcAdd[i];
 
@@ -410,12 +411,15 @@ long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
 
 /*******************************************************************************
  * Name: csInStrRev
- * Purpose: Finds offset of the last occurence of pcFind in pcString.
+ * Purpose: Finds offset of the last occurence of pcFind in pcString, not
+ *          greater than llPosMax.
  *******************************************************************************/
-long long csInStrRev(long long llPos, const char* pcString, const char* pcFind) {
+long long csInStrRev(long long llPosMax, const char* pcString, const char* pcFind) {
+  long long llPos  = 0;
   long long llLast = CS_NOT_FOUND;
 
   while ((llPos = csInStr(llPos, pcString, pcFind)) != CS_NOT_FOUND) {
+    if (llPos > llPosMax) break;
     llLast = llPos;
     ++llPos;
   }
@@ -463,7 +467,7 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
 
   // Set string object's values and last '\0'!
   pcsDest->cStr[llLength] = '\0';
-  pcsDest->lenUtf8        = cstr_lenUtf8(pcsDest->cStr, &pcsDest->len);
+  pcsDest->lenUtf8        = cstr_len_utf8_char(pcsDest->cStr, &pcsDest->len);
   pcsDest->size           = llLength + 1;
 
   csFree(&csSource);
@@ -478,7 +482,7 @@ long long csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const cha
   long long llWidth = cstr_len(pcSplitAt);
 
   // Split, if found.
-  if (llPos > -1) {
+  if (llPos != CS_NOT_FOUND) {
     csMid(pcsLeft,  pcString,               0,       llPos);
     csMid(pcsRight, pcString, llPos + llWidth, CS_MID_REST);
   }
@@ -536,7 +540,7 @@ void csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines) {
 
   // Complete csOut's information and don't forget the '0' byte!
   pcsOut->cStr[llLen] = 0;
-  pcsOut->lenUtf8     = cstr_lenUtf8(pcsOut->cStr, &pcsOut->len);
+  pcsOut->lenUtf8     = cstr_len_utf8_char(pcsOut->cStr, &pcsOut->len);
   pcsOut->size        = llLen + 1;
 
   csFree(&csTmp);
@@ -646,11 +650,11 @@ int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pc
   char  caBufTo[sLenTo];
   char* cpBufTo   = caBufTo;
 
-  // Clear one buffer ...
+  // Copy string to one buffer ...
   for (size_t i = 0; i < sLenFrom; ++i)
     caBufFrom[i] = pcsFromStr->cStr[i];
 
-  // ... and copy string to the other.
+  // ... and clear the other.
   for (size_t i = 0; i < sLenTo; ++i)
     caBufTo[i] = 0;
 
@@ -673,7 +677,7 @@ close_and_exit:
  *******************************************************************************/
 int csIsUtf8(const char* pcString) {
   long long len     = 0;
-  long long lenUtf8 = cstr_lenUtf8(pcString, &len);
+  long long lenUtf8 = cstr_len_utf8_char(pcString, &len);
 
   if (len != lenUtf8)
     return 1;
@@ -698,11 +702,11 @@ int csAt(char* pcChar, const char* pcString, long long llPos) {
 
 /*******************************************************************************
  * Name:  csAtUtf8
- * Purpose: Returns UTF-8 codepoint/size and length of codepoint (0 to 4).
+ * Purpose: Returns UTF-8 codepoint and length of codepoint (0 to 4).
  *******************************************************************************/
 int csAtUtf8(char* pcStr, const char* pcString, long long llPos) {
   long long llPosChar = 0;
-  long long llPosUtf8 = cstr_lenUtf8(pcString, &llPosChar);
+  long long llPosUtf8 = cstr_len_utf8_char(pcString, &llPosChar);
   int       iBytes    = 0;
 
   // Must be a 5 byte char array for a 4 byte UTF-8 char at max. Clear it.
