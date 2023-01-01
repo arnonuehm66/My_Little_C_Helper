@@ -2,7 +2,7 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.8.2
+ ** Version: v0.8.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -22,6 +22,8 @@
  ** 30.03.2020  JE    Now pMatchData is freed befor every new match.
  ** 27.05.2021  JE    Now use 'c_dynamic_arrays_macros.h'.
  ** 27.05.2021  JE    Renamed csOptions to csFlags in rxInitMatcher().
+ ** 01.01.2023  JE    Refactored RX_NO_COUNT to RX_LEN_MAX and sCount to
+ **                   sSearchLenMax.
  *******************************************************************************/
 
 
@@ -59,7 +61,7 @@
 #define RX_ERROR     0x03
 
 #define RX_KEEP_POS (~0L) // Get -1 or largest number.
-#define RX_NO_COUNT (~0L) // Get -1 or largest number.
+#define RX_LEN_MAX  (~0L) // Get -1 or largest number.
 
 
 //******************************************************************************
@@ -90,7 +92,7 @@ typedef struct s_rx_matcher {
 
 int  rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcFlags, cstr* pcsErr);
 void rxFreeMatcher(t_rx_matcher* prxMatcher);
-int        rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr, size_t sCount, int* piErr, cstr* pcsErr);
+int        rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr, size_t sSearchLenMax, int* piErr, cstr* pcsErr);
 
 
 //******************************************************************************
@@ -163,7 +165,7 @@ void rxFreeMatcher(t_rx_matcher* prxMatcher) {
 /*******************************************************************************
  * Name: rxMatch
  *******************************************************************************/
-int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr, size_t sCount, int* piErr, cstr* pcsErr) {
+int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr, size_t sSearchLenMax, int* piErr, cstr* pcsErr) {
   PCRE2_SPTR  pcStr       = (PCRE2_SPTR) pcSearchStr;
   size_t      sStrLength  = 0;
   PCRE2_SPTR  pcSubStr    = NULL;
@@ -175,10 +177,10 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
   int         iRv         = RX_RV_CONT;
   PCRE2_SIZE* psOvector   = NULL;
 
-  if (sCount == RX_NO_COUNT)
+  if (sSearchLenMax == RX_LEN_MAX)
     sStrLength = strlen(pcSearchStr);
   else
-    sStrLength = sCount;
+    sStrLength = sSearchLenMax;
 
   // Init error value to none.
   *piErr = RX_NO_ERROR;

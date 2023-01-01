@@ -715,7 +715,7 @@ void doRegex(const char* pcToSearch, const char* pcRegex, const char* pcFlags) {
   // rxMatch() crams all sub-matches into an intenal cstr array and signals, if
   // matching reached end of string.
   printf("Start offset = %lu\n", rxMatcher.sPos);
-  while (rxMatch(&rxMatcher, RX_KEEP_POS, pcToSearch, RX_NO_COUNT, &iErr, &csErr)) {
+  while (rxMatch(&rxMatcher, RX_KEEP_POS, pcToSearch, RX_LEN_MAX, &iErr, &csErr)) {
     for (int i = 0; i < rxMatcher.dacsMatch.sCount; ++i)
       printf("$%d = '%s'\n", i, rxMatcher.dacsMatch.pVal[i].cStr);
     printf("Next offset = %lu\n", rxMatcher.sPos);
