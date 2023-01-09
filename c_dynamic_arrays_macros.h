@@ -57,7 +57,7 @@
 //*   daAdd(uint32_t, myDa, 10);
 //*   daAdd(uint32_t, myDa, 100);
 //*
-//*   uint32_t Variable = myDa.pVal[2];
+//*   uint32_t var = myDa.pVal[2];
 //*
 //*   int rv = myFunction(myDa);
 //*
