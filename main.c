@@ -554,7 +554,7 @@ void getLable(t_rx_matcher* rxMatcher, t_data* ptData, cstr* pcsLbl) {
 //*******************************************************************************
 //* Name:  getLblWrapper
 //* Purpose: Ease the use of getLable().
-//*******************************************************************************
+//*******************************************************************************`
 void getLblWrapper(t_rx_matcher* rxM, t_data* ptD, size_t sOff, cstr* csLbl) {
   cstr csErr = csNew("");
   int  iErr  = 0;
