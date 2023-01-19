@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.20.7
+ ** Version: v0.20.8
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -14,14 +14,14 @@
  ** 08.02.2018  JE    Added cstr2ll(), ll2cstr(), ld2cstr() and cstr2ld().
  ** 15.02.2018  JE    Added csSplit().
  ** 15.02.2018  JE    Changed interface of csInStr() and csCat().
- ** 15.02.2018  JE    Added a few csClear() to removed memory leaks.
+ ** 15.02.2018  JE    Added a few csClear() to remove memory leaks.
  ** 22.02.2018  JE    Added csFree() for freeing memory.
  ** 22.02.2018  JE    Changed csClear() to reset string to "".
  ** 29.04.2018  JE    Added csInput() for a convienient string input 'box'.
  ** 29.05.2018  JE    Added csTrim(), strips leading and trailing whitespaces.
  ** 29.05.2018  JE    Added cstr_check_if_whitespace() as helper for csTrim().
  ** 28.08.2018  JE    Added csHhex2ll() and ll2csHhex().
- ** 11.09.2018  JE    Added csSetf() to mimik a secure sprinf().
+ ** 11.09.2018  JE    Added csSetf() to mimic a secure sprinf().
  ** 21.10.2018  JE    Now cstr do make no unecessary reallocations.
  ** 31.01.2019  JE    Added 'csTmp' in 'csSet()', because 'pcString' could be
  **                   a copy of 'pcsString.cStr', and therefore been cleared
@@ -70,7 +70,8 @@
  ** 19.04.2022  JE    Removed hacky int to char* conversion in csReadLine().
  ** 25.11.2022  JE    Now free char pointer without check for NULL.
  ** 25.11.2022  JE    Simplify checks in cstr_check_if_whitespace().
- ** 25.12.20200 JE    Fixed csInStrRev() logic error where pos will end.
+ ** 25.12.2022  JE    Fixed csInStrRev() logic error where pos will end.
+ ** 19.01.2023  JE    Switched to from/to logic consistently in csIconv().
  *******************************************************************************/
 
 
@@ -153,7 +154,7 @@ void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
 int         csInput(const char* pcMsg, cstr* pcsDest);
 int         csReadLine(cstr* pcsLine, FILE* hFile);
 void        csSanitize(cstr* pcsLbl);
-int         csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo);
+int         csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo);
 int         csIsUtf8(const char* pcString);
 int         csAt(char* pcChar, const char* pcString, long long llPos);
 int         csAtUtf8(char* pcChar, const char* pcString, long long llPos);
@@ -632,7 +633,7 @@ void csSanitize(cstr* pcsLbl) {
  * Name:  csIconv
  * Purpose: Runs lib version of `echo 'str' | iconv -f from -t to`.
  *******************************************************************************/
-int csIconv(cstr* pcsToStr, cstr* pcsFromStr, const char* pcFrom, const char* pcTo) {
+int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo) {
   size_t  sLenFrom   = pcsFromStr->size;
   size_t  sLenTo     = pcsFromStr->size * 2; // Worst case is * 4!
   iconv_t tConverter = iconv_open(pcTo, pcFrom);
