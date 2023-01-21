@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.20.8
+ ** Version: v0.20.9
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -72,6 +72,7 @@
  ** 25.11.2022  JE    Simplify checks in cstr_check_if_whitespace().
  ** 25.12.2022  JE    Fixed csInStrRev() logic error where pos will end.
  ** 19.01.2023  JE    Switched to from/to logic consistently in csIconv().
+ ** 21.01.2023  JE    Added pfAgain to csIconv() to signal outbuffer too small.
  *******************************************************************************/
 
 
@@ -90,6 +91,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <iconv.h>
+#include <errno.h>
 
 
 //******************************************************************************
@@ -154,7 +156,7 @@ void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
 int         csInput(const char* pcMsg, cstr* pcsDest);
 int         csReadLine(cstr* pcsLine, FILE* hFile);
 void        csSanitize(cstr* pcsLbl);
-int         csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo);
+int         csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo, int* pfAgain);
 int         csIsUtf8(const char* pcString);
 int         csAt(char* pcChar, const char* pcString, long long llPos);
 int         csAtUtf8(char* pcChar, const char* pcString, long long llPos);
@@ -632,10 +634,12 @@ void csSanitize(cstr* pcsLbl) {
 /*******************************************************************************
  * Name:  csIconv
  * Purpose: Runs lib version of `echo 'str' | iconv -f from -t to`.
+ *          Initial pfAgain = 0. 1 is returned if out-buffer was too small.
+ *          Function must be called again with this pfAgain value.
  *******************************************************************************/
-int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo) {
+int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo, int* pfAgain) {
   size_t  sLenFrom   = pcsFromStr->size;
-  size_t  sLenTo     = pcsFromStr->size * 2; // Worst case is * 4!
+  size_t  sLenTo     = pcsFromStr->size * ((*pfAgain) ? 4 : 2); // Mostly * 2 is enough. Worst case * 4!
   iconv_t tConverter = iconv_open(pcTo, pcFrom);
   int     iRetVal    = 1;
 
@@ -660,6 +664,10 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
     caBufTo[i] = 0;
 
   if (iconv(tConverter, &cpBufFrom, &sLenFrom, &cpBufTo, &sLenTo) == (size_t) -1) {
+    if (errno == E2BIG) {
+      *pfAgain = 1;
+      goto close_and_exit;
+    }
     iRetVal = 0;
     goto close_and_exit;
   }
