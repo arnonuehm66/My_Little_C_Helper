@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.20.9
+ ** Version: v0.21.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -72,7 +72,9 @@
  ** 25.11.2022  JE    Simplify checks in cstr_check_if_whitespace().
  ** 25.12.2022  JE    Fixed csInStrRev() logic error where pos will end.
  ** 19.01.2023  JE    Switched to from/to logic consistently in csIconv().
- ** 21.01.2023  JE    Added pfAgain to csIconv() to signal outbuffer too small.
+ ** 21.01.2023  JE    Added pfAgain to csIconv() to signal out-buffer too small.
+ ** 21.01.2023  JE    Changed logic from pfAgain to iFactorGuess in csIconv(),
+ **                   now realloc out-buffer automatically while too small.
  *******************************************************************************/
 
 
@@ -109,6 +111,9 @@
 #define CS_START      (0)
 #define CS_NOT_FOUND (-1)
 
+// csIvonv()
+#define CS_ICONV_NO_GUESS 0
+
 
 //******************************************************************************
 //* type definition
@@ -135,6 +140,9 @@ static int       cstr_utf8_bytes(const char* c);
 static long long cstr_len_utf8_char(const char* pcString, long long* pLen);
 static long long cstr_len(const char* pcString);
 static int       cstr_check_if_whitespace(const char cChar, int bWithNewLines);
+static int       cs_init_iconv_buffer(cstr* pcsFromStr,
+                                      char** pacBufFrom, char** ppcBufFrom, size_t sLenFrom,
+                                      char** pacBufTo,   char** ppcBufTo,   size_t sLenTo);
 
 // External functions.
 
@@ -156,7 +164,7 @@ void        csTrim(cstr* pcsOut, const char* pcString, int bWithNewLines);
 int         csInput(const char* pcMsg, cstr* pcsDest);
 int         csReadLine(cstr* pcsLine, FILE* hFile);
 void        csSanitize(cstr* pcsLbl);
-int         csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo, int* pfAgain);
+int         csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo, int iFactorGuess);
 int         csIsUtf8(const char* pcString);
 int         csAt(char* pcChar, const char* pcString, long long llPos);
 int         csAtUtf8(char* pcChar, const char* pcString, long long llPos);
@@ -265,6 +273,33 @@ static int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
   if                   (cChar == ' '  || cChar == '\t')  return 1;
   if (bWithNewLines && (cChar == '\n' || cChar == '\r')) return 1;
   return 0;
+}
+
+/*******************************************************************************
+ * Name:  cs_init_iconv_buffer
+ *******************************************************************************/
+static int cs_init_iconv_buffer(cstr* pcsFromStr,
+                                char** pacBufFrom, char** ppcBufFrom, size_t sLenFrom,
+                                char** pacBufTo,   char** ppcBufTo,   size_t sLenTo) {
+  // (Re-)allocate vars and copy their pointers for iconv().
+  *pacBufFrom = (char*) realloc(*pacBufFrom, sLenFrom * sizeof(char));
+  if (*pacBufFrom == NULL)
+    return 0;
+  *ppcBufFrom = *pacBufFrom;
+  *pacBufTo   = (char*) realloc(*pacBufTo,   sLenTo   * sizeof(char));
+  if (*pacBufTo   == NULL)
+    return 0;
+  *ppcBufTo   = *pacBufTo;
+
+  // Copy string to one buffer ...
+  for (size_t i = 0; i < sLenFrom; ++i)
+    (*pacBufFrom)[i] = pcsFromStr->cStr[i];
+
+  // ... and clear the other.
+  for (size_t i = 0; i < sLenTo; ++i)
+    (*pacBufTo)[i] = 0;
+
+  return 1;
 }
 
 
@@ -634,14 +669,19 @@ void csSanitize(cstr* pcsLbl) {
 /*******************************************************************************
  * Name:  csIconv
  * Purpose: Runs lib version of `echo 'str' | iconv -f from -t to`.
- *          Initial pfAgain = 0. 1 is returned if out-buffer was too small.
- *          Function must be called again with this pfAgain value.
+ *          iFactorGuess gives a first factor to multiply in-buffer size.
  *******************************************************************************/
-int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo, int* pfAgain) {
+int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo, int iFactorGuess) {
+  int     iFactor    = (iFactorGuess == CS_ICONV_NO_GUESS) ? 1 : iFactorGuess;
   size_t  sLenFrom   = pcsFromStr->size;
-  size_t  sLenTo     = pcsFromStr->size * ((*pfAgain) ? 4 : 2); // Mostly * 2 is enough. Worst case * 4!
+  size_t  sLenTo     = pcsFromStr->size * iFactor;
   iconv_t tConverter = iconv_open(pcTo, pcFrom);
   int     iRetVal    = 1;
+
+  char* acBufFrom = NULL;
+  char* pcBufFrom = NULL;
+  char* acBufTo   = NULL;
+  char* pcBufTo   = NULL;
 
   // Check if something is to do.
   if (tConverter == (iconv_t) -1)
@@ -649,30 +689,27 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
   if (sLenFrom   ==            0)
     return 1;
 
-  // Create dynamically allocated vars and copy their pointers for iconv().
-  char  caBufFrom[sLenFrom];
-  char* cpBufFrom = caBufFrom;
-  char  caBufTo[sLenTo];
-  char* cpBufTo   = caBufTo;
-
-  // Copy string to one buffer ...
-  for (size_t i = 0; i < sLenFrom; ++i)
-    caBufFrom[i] = pcsFromStr->cStr[i];
-
-  // ... and clear the other.
-  for (size_t i = 0; i < sLenTo; ++i)
-    caBufTo[i] = 0;
-
-  if (iconv(tConverter, &cpBufFrom, &sLenFrom, &cpBufTo, &sLenTo) == (size_t) -1) {
-    if (errno == E2BIG) {
-      *pfAgain = 1;
+  while (1) {
+    // Create dynamically allocated vars and copy their pointers for iconv().
+    if (! cs_init_iconv_buffer(pcsFromStr,&acBufFrom, &pcBufFrom, sLenFrom, &acBufTo, &pcBufTo, sLenTo)) {
+      iRetVal = 0;
       goto close_and_exit;
     }
-    iRetVal = 0;
-    goto close_and_exit;
+
+    if (iconv(tConverter, &pcBufFrom, &sLenFrom, &pcBufTo, &sLenTo) == (size_t) -1) {
+      if (errno == E2BIG) {
+        ++iFactor;
+        sLenTo = pcsFromStr->size * iFactor;
+        continue;
+      }
+      iRetVal = 0;
+      goto close_and_exit;
+    }
+    else
+      break;
   }
 
-  csSet(pcsToStr, caBufTo);
+  csSet(pcsToStr, acBufTo);
 
 close_and_exit:
   iconv_close(tConverter);

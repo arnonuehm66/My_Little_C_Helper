@@ -558,7 +558,6 @@ void getLable(t_rx_matcher* rxMatcher, t_data* ptData, cstr* pcsLbl) {
 void getLblWrapper(t_rx_matcher* rxM, t_data* ptD, size_t sOff, cstr* csLbl) {
   cstr csErr  = csNew("");
   int  iErr   = 0;
-  int  fAgain = 0;  // Never be used here, because ISO8859-1 never leaves latin range of characters!
 
   // Shorten by copying.
   char*  pB = (char*) ptD->pBytes;
@@ -567,7 +566,8 @@ void getLblWrapper(t_rx_matcher* rxM, t_data* ptD, size_t sOff, cstr* csLbl) {
   // Fetch matched string.
   if (rxMatch(rxM, sOff, pB, sS, &iErr, &csErr)) {
     getLable(rxM, ptD, csLbl);
-    if (! csIconv(csLbl, csLbl, "ISO8859-1", "UTF-8//TRANSLIT", &fAgain))
+    // No factor required, because ISO8859-1 never leaves latin range of characters!
+    if (! csIconv(csLbl, csLbl, "ISO8859-1", "UTF-8//TRANSLIT", CS_ICONV_NO_GUESS))
       dispatchError(ERR_ICONV, "codepage conversion failed");
   }
 }
