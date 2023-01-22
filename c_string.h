@@ -140,9 +140,9 @@ static int       cstr_utf8_bytes(const char* c);
 static long long cstr_len_utf8_char(const char* pcString, long long* pLen);
 static long long cstr_len(const char* pcString);
 static int       cstr_check_if_whitespace(const char cChar, int bWithNewLines);
-static int       cs_init_iconv_buffer(cstr* pcsFromStr,
-                                      char** pacBufFrom, char** ppcBufFrom, size_t sLenFrom,
-                                      char** pacBufTo,   char** ppcBufTo,   size_t sLenTo);
+static int       cstr_init_iconv_buffer(cstr* pcsFromStr,
+                                        char** pacBufFrom, char** ppcBufFrom, size_t sLenFrom,
+                                        char** pacBufTo,   char** ppcBufTo,   size_t sLenTo);
 
 // External functions.
 
@@ -276,9 +276,9 @@ static int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
 }
 
 /*******************************************************************************
- * Name:  cs_init_iconv_buffer
+ * Name:  cstr_init_iconv_buffer
  *******************************************************************************/
-static int cs_init_iconv_buffer(cstr* pcsFromStr,
+static int cstr_init_iconv_buffer(cstr* pcsFromStr,
                                 char** pacBufFrom, char** ppcBufFrom, size_t sLenFrom,
                                 char** pacBufTo,   char** ppcBufTo,   size_t sLenTo) {
   // (Re-)allocate vars and copy their pointers for iconv().
@@ -691,7 +691,7 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
 
   while (1) {
     // Create dynamically allocated vars and copy their pointers for iconv().
-    if (! cs_init_iconv_buffer(pcsFromStr,&acBufFrom, &pcBufFrom, sLenFrom, &acBufTo, &pcBufTo, sLenTo)) {
+    if (! cstr_init_iconv_buffer(pcsFromStr,&acBufFrom, &pcBufFrom, sLenFrom, &acBufTo, &pcBufTo, sLenTo)) {
       iRetVal = 0;
       goto close_and_exit;
     }
