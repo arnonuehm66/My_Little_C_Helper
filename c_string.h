@@ -112,7 +112,7 @@
 #define CS_NOT_FOUND (-1)
 
 // csIvonv()
-#define CS_ICONV_NO_GUESS 0
+#define CS_ICONV_NO_GUESS (0)
 
 
 //******************************************************************************
