@@ -279,8 +279,8 @@ static int cstr_check_if_whitespace(const char cChar, int bWithNewLines) {
  * Name:  cstr_init_iconv_buffer
  *******************************************************************************/
 static int cstr_init_iconv_buffer(cstr* pcsFromStr,
-                                char** pacBufFrom, char** ppcBufFrom, size_t sLenFrom,
-                                char** pacBufTo,   char** ppcBufTo,   size_t sLenTo) {
+                                  char** pacBufFrom, char** ppcBufFrom, size_t sLenFrom,
+                                  char** pacBufTo,   char** ppcBufTo,   size_t sLenTo) {
   // (Re-)allocate vars and copy their pointers for iconv().
   *pacBufFrom = (char*) realloc(*pacBufFrom, sLenFrom * sizeof(char));
   if (*pacBufFrom == NULL)
