@@ -697,10 +697,11 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
     }
 
     if (iconv(tConverter, &pcBufFrom, &sLenFrom, &pcBufTo, &sLenTo) == (size_t) -1) {
-      // If out-buffer was too small try a bigger one.
+      // If out-buffer was too small try a bigger one and reset lengths.
       if (errno == E2BIG) {
         ++iFactor;
-        sLenTo = pcsFromStr->size * iFactor;
+        sLenFrom = pcsFromStr->size;
+        sLenTo   = pcsFromStr->size * iFactor;
         continue;
       }
       // Else a non-recoverable error occurred.
