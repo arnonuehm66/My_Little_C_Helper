@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.21.1
+ ** Version: v0.21.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -75,6 +75,7 @@
  ** 21.01.2023  JE    Added pfAgain to csIconv() to signal out-buffer too small.
  ** 21.01.2023  JE    Changed logic from pfAgain to iFactorGuess in csIconv(),
  **                   now realloc out-buffer automatically while too small.
+ ** 29.01.2023  JE    Added free() to csIconv(), preventing memory leak.
  *******************************************************************************/
 
 
@@ -717,6 +718,8 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
 
 close_and_exit:
   iconv_close(tConverter);
+  free(acBufFrom);
+  free(acBufTo);
 
   return iRetVal;
 }
