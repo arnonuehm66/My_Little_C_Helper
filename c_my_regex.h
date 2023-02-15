@@ -2,7 +2,7 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.8.3
+ ** Version: v0.10.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -24,6 +24,8 @@
  ** 27.05.2021  JE    Renamed csOptions to csFlags in rxInitMatcher().
  ** 01.01.2023  JE    Refactored RX_NO_COUNT to RX_LEN_MAX and sCount to
  **                   sSearchLenMax.
+ ** 12.02.2023  JE    Now rxInitMatcher() throws a wrong option error.
+ ** 12.02.2023  JE    Now rxMatch() sets pos = 0 if finished without error.
  *******************************************************************************/
 
 
@@ -121,10 +123,25 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcF
   // Convert option string into options and init everything to work global.
   // Because PCRE2_EXTENDED don't work, I use the implicit form '(?x:...)'.
   for (int i = 0; i < csFlags.len; ++i) {
-    if (csFlags.cStr[i] == 'x') csSetf(&csRegex, "(?x:%s)", csRegex.cStr);
-    if (csFlags.cStr[i] == 'i') prxMatcher->ui32Opts |= PCRE2_CASELESS;
-    if (csFlags.cStr[i] == 'm') prxMatcher->ui32Opts |= PCRE2_MULTILINE;
-    if (csFlags.cStr[i] == 's') prxMatcher->ui32Opts |= PCRE2_DOTALL;
+    if (csFlags.cStr[i] == 'x') {
+      csSetf(&csRegex, "(?x:%s)", csRegex.cStr);
+      continue;
+    }
+    if (csFlags.cStr[i] == 'i') {
+      prxMatcher->ui32Opts |= PCRE2_CASELESS;
+      continue;
+    }
+    if (csFlags.cStr[i] == 'm') {
+      prxMatcher->ui32Opts |= PCRE2_MULTILINE;
+      continue;
+    }
+    if (csFlags.cStr[i] == 's') {
+      prxMatcher->ui32Opts |= PCRE2_DOTALL;
+      continue;
+    }
+    csSetf(pcsErr, "Unkown option '%c'", csFlags.cStr[i]);
+    iErr = RX_ERROR;
+    goto free_and_exit;
   }
 
   // Compile regex
@@ -145,6 +162,7 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcF
     iErr = RX_ERROR;
   }
 
+free_and_exit:
   csFree(&csFlags);
   csFree(&csRegex);
 
@@ -195,7 +213,8 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
   prxMatcher->pMatchData = pcre2_match_data_create_from_pattern(prxMatcher->pRegex, NULL);
 
   // Set pos to start from if wanted.
-  if (sStartPos != RX_KEEP_POS) prxMatcher->sPos = sStartPos;
+  if (sStartPos != RX_KEEP_POS)
+    prxMatcher->sPos = sStartPos;
 
   iMatchCount = pcre2_match(
     prxMatcher->pRegex,       // the compiled pattern
@@ -215,6 +234,7 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
     csSet(pcsErr, "No match");
     *piErr = RX_NO_MATCH;
     iRv    = RX_RV_END;
+    prxMatcher->sPos = 0;
     goto free_and_exit;
   }
   if (iMatchCount < 0) {                      // Matching failed.
@@ -273,6 +293,7 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
     csSet(pcsErr, "End of subject");
     *piErr = RX_NO_ERROR;
     iRv    = RX_RV_END;
+    prxMatcher->sPos = 0;
     goto free_and_exit;
   }
 
