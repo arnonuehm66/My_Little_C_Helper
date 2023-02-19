@@ -2,7 +2,7 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.10.1
+ ** Version: v0.10.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -26,6 +26,7 @@
  **                   sSearchLenMax.
  ** 12.02.2023  JE    Now rxInitMatcher() throws a wrong option error.
  ** 12.02.2023  JE    Now rxMatch() sets pos = 0 if finished without error.
+ ** 19.02.2023  JE    Added convienience macros for ovector start and end.
  *******************************************************************************/
 
 
@@ -64,6 +65,9 @@
 
 #define RX_KEEP_POS (~0L) // Get -1 or largest number.
 #define RX_LEN_MAX  (~0L) // Get -1 or largest number.
+
+#define O_START(var) (2 * var)      // Even index.
+#define O_END(var)   (2 * var + 1)  // Odd index.
 
 
 //******************************************************************************
@@ -190,8 +194,6 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
   cstr        csSubStr    = csNew("");
   size_t      sSubStrLen  = 0;
   int         iMatchCount = 0;
-  int         iStart      = 0;
-  int         iEnd        = 0;
   int         iRv         = RX_RV_CONT;
   PCRE2_SIZE* psOvector   = NULL;
 
@@ -261,16 +263,13 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
   daClear(size_t, prxMatcher->dasEnd);
 
   for (int i = 0; i < iMatchCount; ++i) {
-    iStart = 2 * i;       // Next even index.
-    iEnd   = 2 * i + 1;   // Next odd index.
-
     // Get offset and length of a match ...
-    pcSubStr   = pcStr           + psOvector[iStart];
-    sSubStrLen = psOvector[iEnd] - psOvector[iStart];
+    pcSubStr   = pcStr               + psOvector[O_START(i)];
+    sSubStrLen = psOvector[O_END(i)] - psOvector[O_START(i)];
 
     // ... save start and end offsets in dynamic arrays, too ...
-    daAdd(size_t, prxMatcher->dasStart, psOvector[iStart]);
-    daAdd(size_t, prxMatcher->dasEnd,   psOvector[iEnd]);
+    daAdd(size_t, prxMatcher->dasStart, psOvector[O_START(i)]);
+    daAdd(size_t, prxMatcher->dasEnd,   psOvector[O_END(i)]);
 
     // ... and add it to the dynamic array via temporary cstr.
     csSetf(&csSubStr, "%.*s", sSubStrLen, pcSubStr);
@@ -278,10 +277,10 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
   }
 
   // Store end of complete match as pos().
-  prxMatcher->sPos = psOvector[1];
+  prxMatcher->sPos = psOvector[O_END(0)];
 
   // If the match was an empty string, hop along one pos.
-  if (psOvector[1] == psOvector[0]) {
+  if (psOvector[1] == psOvector[O_START(0)]) {
     csSet(pcsErr, "Empty string");
     *piErr = RX_NO_ERROR;
     iRv    = RX_RV_CONT;
