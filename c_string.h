@@ -670,7 +670,7 @@ void csSanitize(cstr* pcsLbl) {
 /*******************************************************************************
  * Name:  csIconv
  * Purpose: Runs lib version of `echo 'str' | iconv -f from -t to`.
- *          iFactorGuess gives a first factor to multiply in-buffer size.
+ *          iFactorGuess gives a first factor to multiply in-buffer size with.
  *******************************************************************************/
 int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pcTo, int iFactorGuess) {
   int     iFactor    = (iFactorGuess == CS_ICONV_NO_GUESS) ? 1 : iFactorGuess;
