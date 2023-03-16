@@ -692,7 +692,7 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
 
   while (1) {
     // Create dynamically allocated vars and copy their pointers for iconv().
-    if (! cstr_init_iconv_buffer(pcsFromStr,&acBufFrom, &pcBufFrom, sLenFrom, &acBufTo, &pcBufTo, sLenTo)) {
+    if (! cstr_init_iconv_buffer(pcsFromStr, &acBufFrom, &pcBufFrom, sLenFrom, &acBufTo, &pcBufTo, sLenTo)) {
       iRetVal = 0;
       goto close_and_exit;
     }
