@@ -77,8 +77,8 @@
  **                   now realloc out-buffer automatically while too small.
  ** 29.01.2023  JE    Added free() to csIconv(), preventing memory leak.
  ** 30.06.2023  JE    Deleted superflous pcStr[0] = 0; in csAtUtf8().
- ** 23.07.2023  JE    New constant for csInStrRev() and refactored the others.
- ** 23.07.2023  JE    Now csInStrRev() starts at max length.
+ ** 23.07.2023  JE    Refactored csInStr() constants.
+ ** 23.07.2023  JE    Now csInStrRev() start position is counted from left.
  *******************************************************************************/
 
 
@@ -114,7 +114,6 @@
 // csInStr(), csInStrRev()
 #define CS_INSTR_START      (0)
 #define CS_INSTR_NOT_FOUND (-1)
-#define CS_INSTRREV_START  (-2)
 
 // csIvonv()
 #define CS_ICONV_NO_GUESS (0)
@@ -454,17 +453,18 @@ long long csInStr(long long llPosStart, const char* pcString, const char* pcFind
  * Purpose: Finds first occurence's offset of pcFind in pcString from right.
  *******************************************************************************/
 long long csInStrRev(long long llPosStart, const char* pcString, const char* pcFind) {
-  long long llPos  = 0;
-  long long llLast = CS_INSTR_NOT_FOUND;
+  long long llPos    = 0;
+  long long llLast   = CS_INSTR_NOT_FOUND;
+  long long llStrLen = cstr_len(pcString);
 
-  llPosStart = (llPosStart == CS_INSTRREV_START) ? cstr_len(pcString) : 0;
+  llPosStart = llLenStr - llPosStart;
 
   while ((llPos = csInStr(llPos, pcString, pcFind)) != CS_INSTR_NOT_FOUND) {
     llLast = llPos;
     ++llPos;
   }
 
-  if (llPos > llPosStart)
+  if (llPos > llPosStart || llPos == CS_INSTR_NOT_FOUND)
     return CS_INSTR_NOT_FOUND;
 
   return llLast;
