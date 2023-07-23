@@ -2,12 +2,13 @@
  ** Name: c_dynamic_arrays_macros.h
  ** Purpose:  Provides dynamic arrays as macros.
  ** Author: (JE) Jens Elstner
- ** Version: v0.1.2
+ ** Version: v0.1.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
  ** 11.04.2021  JE    Created lib.
  ** 19.04.2021  JE    Renamed 'ptArray' to 'tArray'.
+ ** 17.07.2023  JE    Deleted if (ptr != NULL) in front of each free(ptr).
  *******************************************************************************/
 
 
@@ -41,7 +42,7 @@
 //*   s_array(uint32_t);
 //*   s_array(float);
 //*
-//* After that, you can use 't_array(uint32_t)' for varaible declarations and
+//* After that, you can use 't_array(uint32_t)' for variable declarations and
 //* as arguments in functions like:
 //*
 //*   int myFunction(t_array(uint32_t) myDa) { ... }
@@ -79,8 +80,8 @@
 //*   daAdd(cstr, myDa, csNew("Zwei"));
 //*   daAdd(cstr, myDa, csNew("Drei"));
 //*
-//* Last argument is the name of the internal pointer (one level beyond)
-//* to be freed prior dynamic array pointer.
+//* Last argument for daFreeEx() is the name of the internal pointer (one
+//* level beyond) to be freed prior dynamic array pointer.
 //*
 //*   daFreeEx(myDa, cStr);
 //*
@@ -137,7 +138,7 @@
  * Purpose: Free memory of dynamic array.
  *******************************************************************************/
 #define daFree(tArray) { \
-  if (tArray.pVal != NULL) free(tArray.pVal); \
+  free(tArray.pVal); \
 }
 
 /*******************************************************************************
@@ -154,9 +155,8 @@
  * Purpose: Free memory of dynamic array.
  *******************************************************************************/
 #define daFreeEx(tArray, pointer) { \
-  for (int i = 0; i < tArray.sCount; ++i) \
-    if (tArray.pVal[i].pointer != NULL) free(tArray.pVal[i].pointer); \
-  if (tArray.pVal != NULL) free(tArray.pVal); \
+  for (int i = 0; i < tArray.sCount; ++i) free(tArray.pVal[i].pointer); \
+  free(tArray.pVal); \
 }
 
 /*******************************************************************************

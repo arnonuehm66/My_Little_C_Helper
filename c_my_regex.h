@@ -280,7 +280,7 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
   prxMatcher->sPos = psOvector[O_END(0)];
 
   // If the match was an empty string, hop along one pos.
-  if (psOvector[O_END(0) ] == psOvector[O_START(0)]) {
+  if (psOvector[O_END(0)] == psOvector[O_START(0)]) {
     csSet(pcsErr, "Empty string");
     *piErr = RX_NO_ERROR;
     iRv    = RX_RV_CONT;

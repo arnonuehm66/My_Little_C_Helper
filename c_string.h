@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.21.2
+ ** Version: v0.21.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -76,6 +76,7 @@
  ** 21.01.2023  JE    Changed logic from pfAgain to iFactorGuess in csIconv(),
  **                   now realloc out-buffer automatically while too small.
  ** 29.01.2023  JE    Added free() to csIconv(), preventing memory leak.
+ ** 30.06.2023  JE    Deleted superflous pcStr[0] = 0; in csAtUtf8().
  *******************************************************************************/
 
 
@@ -319,10 +320,7 @@ cstr csNew(const char* pcString) {
   cstr      csOut   = {0};
   long long llClen  = 0;
   long long llUlen  = cstr_len_utf8_char(pcString, &llClen);
-  long long llCsize = 0;
-
-  // Include '\0'.
-  llCsize = llClen + 1;
+  long long llCsize = llClen + 1; // Include '\0'.
 
   cstr_init(&csOut);
   cstr_double_capacity_if_full(&csOut, llCsize);
@@ -757,19 +755,17 @@ int csAt(char* pcChar, const char* pcString, long long llPos) {
  * Name:  csAtUtf8
  * Purpose: Returns UTF-8 codepoint and length of codepoint (0 to 4).
  *******************************************************************************/
-int csAtUtf8(char* pcStr, const char* pcString, long long llPos) {
+int csAtUtf8(char* pcChar, const char* pcString, long long llPos) {
   long long llPosChar = 0;
   long long llPosUtf8 = cstr_len_utf8_char(pcString, &llPosChar);
   int       iBytes    = 0;
 
-  // Must be a 5 byte char array for a 4 byte UTF-8 char at max. Clear it.
-  pcStr[0] = pcStr[1] = pcStr[2] = pcStr[3] = pcStr[4] = 0;
+  // Must be a 5 byte char array for a 4 byte UTF-8 char at max.
+  pcChar[0] = pcChar[1] = pcChar[2] = pcChar[3] = pcChar[4] = 0;
 
   // Calc count of UTF-8 chars for boundary check.
-  if (llPos > llPosUtf8 || llPos < 0) {
-    pcStr[0] = 0;
+  if (llPos > llPosUtf8 || llPos < 0)
     return 0;
-  }
 
   // Reset vars for their actual purpose.
   llPosChar = 0;
@@ -778,17 +774,15 @@ int csAtUtf8(char* pcStr, const char* pcString, long long llPos) {
   // Get offset of UTF-8 position.
   while (llPosUtf8 < llPos) {
     // Stop at any malformed UTF-8 char.
-    if ((iBytes = cstr_utf8_bytes(&pcString[llPosChar])) == 0) {
-      pcStr[0] = 0;
+    if ((iBytes = cstr_utf8_bytes(&pcString[llPosChar])) == 0)
       return 0;
-    }
     llPosChar += iBytes;
     llPosUtf8 += 1;
   }
 
   iBytes = cstr_utf8_bytes(&pcString[llPosChar]);
   for(long long i = 0; i < iBytes; ++i)
-    pcStr[i] = pcString[llPosChar + i];
+    pcChar[i] = pcString[llPosChar + i];
 
   return iBytes;
 }

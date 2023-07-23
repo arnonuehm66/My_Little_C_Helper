@@ -556,8 +556,8 @@ void getLable(t_rx_matcher* rxMatcher, t_data* ptData, cstr* pcsLbl) {
 //* Purpose: Ease the use of getLable().
 //*******************************************************************************`
 void getLblWrapper(t_rx_matcher* rxM, t_data* ptD, size_t sOff, cstr* csLbl) {
-  cstr csErr  = csNew("");
-  int  iErr   = 0;
+  cstr csErr = csNew("");
+  int  iErr  = 0;
 
   // Shorten by copying.
   char*  pB = (char*) ptD->pBytes;
