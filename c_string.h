@@ -457,14 +457,14 @@ long long csInStrRev(long long llPosStart, const char* pcString, const char* pcF
   long long llLast   = CS_INSTR_NOT_FOUND;
   long long llStrLen = cstr_len(pcString);
 
-  llPosStart = llLenStr - llPosStart;
+  llPosStart = llStrLen - llPosStart;
 
   while ((llPos = csInStr(llPos, pcString, pcFind)) != CS_INSTR_NOT_FOUND) {
     llLast = llPos;
     ++llPos;
   }
 
-  if (llPos > llPosStart || llPos == CS_INSTR_NOT_FOUND)
+  if (llPos > llPosStart)
     return CS_INSTR_NOT_FOUND;
 
   return llLast;
