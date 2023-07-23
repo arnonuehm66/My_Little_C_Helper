@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.10.7
+ ** Version: v0.10.8
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -31,6 +31,7 @@
  ** 11.11.2021  JE    Got rid of memory leak in 'getMename()'.
  ** 01.07.2022  JE    Shortened switch with 'toupper()' in 'getHexLongParm()'.
  ** 25.07.2022  JE    Added '#define arraySize(arr)' to get elements count.
+ ** 23.07.2023  JE    Now uses c_string.h  v0.21.4
  *******************************************************************************/
 
 
@@ -112,10 +113,10 @@ void getMename(cstr* pcsMename, const char* argv0) {
   cstr csRest = csNew("");
 
   // Get the very last '/' if any.
-  llPos = csInStrRev(CS_START, argv0, "/");
+  llPos = csInStrRev(CS_INSTRREV_START, argv0, "/");
 
   // Split at that '/' or get full string.
-  if (llPos != CS_NOT_FOUND) {
+  if (llPos != CS_INSTR_NOT_FOUND) {
     csSplitPos(llPos, &csRest, pcsMename, argv0, 1);
   }
   else {

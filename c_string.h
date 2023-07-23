@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.21.3
+ ** Version: v0.21.4
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -77,6 +77,8 @@
  **                   now realloc out-buffer automatically while too small.
  ** 29.01.2023  JE    Added free() to csIconv(), preventing memory leak.
  ** 30.06.2023  JE    Deleted superflous pcStr[0] = 0; in csAtUtf8().
+ ** 23.07.2023  JE    New constant for csInStrRev() and refactored the others.
+ ** 23.07.2023  JE    Now csInStrRev() starts at max length.
  *******************************************************************************/
 
 
@@ -110,8 +112,9 @@
 #define CS_MID_REST (-1)
 
 // csInStr(), csInStrRev()
-#define CS_START      (0)
-#define CS_NOT_FOUND (-1)
+#define CS_INSTR_START      (0)
+#define CS_INSTR_NOT_FOUND (-1)
+#define CS_INSTRREV_START  (-2)
 
 // csIvonv()
 #define CS_ICONV_NO_GUESS (0)
@@ -433,7 +436,7 @@ long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
 
   // Sanity checks.
   if (llPos < 0 || llPos > llStrLen || llStrLen == 0 || llFindLen == 0)
-    return CS_NOT_FOUND;
+    return CS_INSTR_NOT_FOUND;
 
   for (i = llPos; i < llStrLen; ++i)
     if (pcFind[c++] == pcString[i]) {
@@ -443,7 +446,7 @@ long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
     else
       c = 0;
 
-  return CS_NOT_FOUND;
+  return CS_INSTR_NOT_FOUND;
 }
 
 /*******************************************************************************
@@ -453,13 +456,17 @@ long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
  *******************************************************************************/
 long long csInStrRev(long long llPosMax, const char* pcString, const char* pcFind) {
   long long llPos  = 0;
-  long long llLast = CS_NOT_FOUND;
+  long long llLast = CS_INSTR_NOT_FOUND;
 
-  while ((llPos = csInStr(llPos, pcString, pcFind)) != CS_NOT_FOUND) {
-    if (llPos > llPosMax) break;
+  llPosMax = (llPosMax == CS_INSTRREV_START) ? cstr_len(pcString) : 0;
+
+  while ((llPos = csInStr(llPos, pcString, pcFind)) != CS_INSTR_NOT_FOUND) {
     llLast = llPos;
     ++llPos;
   }
+
+  if (llPos > llPosMax)
+    return CS_INSTR_NOT_FOUND;
 
   return llLast;
 }
@@ -519,7 +526,7 @@ long long csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const cha
   long long llWidth = cstr_len(pcSplitAt);
 
   // Split, if found.
-  if (llPos != CS_NOT_FOUND) {
+  if (llPos != CS_INSTR_NOT_FOUND) {
     csMid(pcsLeft,  pcString,               0,       llPos);
     csMid(pcsRight, pcString, llPos + llWidth, CS_MID_REST);
   }
