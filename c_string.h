@@ -160,8 +160,8 @@ void csFree(cstr* pcsString);
 void        csSet(cstr* pcsString, const char* pcString);
 void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
-long long   csInStr(long long llPos, const char* pcString, const char* pcFind);
-long long   csInStrRev(long long llPosMax, const char* pcString, const char* pcFind);
+long long   csInStr(long long llPosStart, const char* pcString, const char* pcFind);
+long long   csInStrRev(long long llPosStart, const char* pcString, const char* pcFind);
 void        csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long llLength);
 long long   csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt);
 int         csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcString, long long llWidth);
@@ -426,19 +426,19 @@ void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
 
 /*******************************************************************************
  * Name: csInStr
- * Purpose: Finds offset of the first occurence of pcFind in pcString.
+ * Purpose: Finds first occurence's offset of pcFind in pcString from left.
  *******************************************************************************/
-long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
+long long csInStr(long long llPosStart, const char* pcString, const char* pcFind) {
   long long llStrLen  = cstr_len(pcString);
   long long llFindLen = cstr_len(pcFind);
   long long i         = 0;   // Offset in String.
   long long c         = 0;   // Offset in Find.
 
   // Sanity checks.
-  if (llPos < 0 || llPos > llStrLen || llStrLen == 0 || llFindLen == 0)
+  if (llPosStart < 0 || llPosStart > llStrLen || llStrLen == 0 || llFindLen == 0)
     return CS_INSTR_NOT_FOUND;
 
-  for (i = llPos; i < llStrLen; ++i)
+  for (i = llPosStart; i < llStrLen; ++i)
     if (pcFind[c++] == pcString[i]) {
       if (c == llFindLen)
         return i - c + 1;
@@ -451,21 +451,20 @@ long long csInStr(long long llPos, const char* pcString, const char* pcFind) {
 
 /*******************************************************************************
  * Name: csInStrRev
- * Purpose: Finds offset of the last occurence of pcFind in pcString, not
- *          greater than llPosMax.
+ * Purpose: Finds first occurence's offset of pcFind in pcString from right.
  *******************************************************************************/
-long long csInStrRev(long long llPosMax, const char* pcString, const char* pcFind) {
+long long csInStrRev(long long llPosStart, const char* pcString, const char* pcFind) {
   long long llPos  = 0;
   long long llLast = CS_INSTR_NOT_FOUND;
 
-  llPosMax = (llPosMax == CS_INSTRREV_START) ? cstr_len(pcString) : 0;
+  llPosStart = (llPosStart == CS_INSTRREV_START) ? cstr_len(pcString) : 0;
 
   while ((llPos = csInStr(llPos, pcString, pcFind)) != CS_INSTR_NOT_FOUND) {
     llLast = llPos;
     ++llPos;
   }
 
-  if (llPos > llPosMax)
+  if (llPos > llPosStart)
     return CS_INSTR_NOT_FOUND;
 
   return llLast;
