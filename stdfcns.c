@@ -113,7 +113,7 @@ void getMename(cstr* pcsMename, const char* argv0) {
   cstr csRest = csNew("");
 
   // Get the very last '/' if any.
-  llPos = csInStrRev(CS_INSTRREV_START, argv0, "/");
+  llPos = csInStrRev(CS_INSTR_START, argv0, "/");
 
   // Split at that '/' or get full string.
   if (llPos != CS_INSTR_NOT_FOUND) {
