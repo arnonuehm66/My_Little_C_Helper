@@ -31,7 +31,7 @@
  ** 11.11.2021  JE    Got rid of memory leak in 'getMename()'.
  ** 01.07.2022  JE    Shortened switch with 'toupper()' in 'getHexLongParm()'.
  ** 25.07.2022  JE    Added '#define arraySize(arr)' to get elements count.
- ** 23.07.2023  JE    Now uses c_string.h  v0.21.4
+ ** 23.07.2023  JE    Now uses c_string.h  v0.21.5
  *******************************************************************************/
 
 
