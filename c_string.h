@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.21.4
+ ** Version: v0.21.5
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
