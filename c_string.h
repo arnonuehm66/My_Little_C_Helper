@@ -694,13 +694,13 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
   if (tConverter == (iconv_t) -1)
     return 0;
   if (sLenFrom   ==            0)
-    goto close_free_and_exit;
+    goto close_and_exit;
 
   while (1) {
     // Create dynamically allocated vars and copy their pointers for iconv().
     if (! cstr_init_iconv_buffer(pcsFromStr, &acBufFrom, &pcBufFrom, sLenFrom, &acBufTo, &pcBufTo, sLenTo)) {
       iRetVal = 0;
-      goto close_free_and_exit;
+      goto free_close_and_exit;
     }
 
     if (iconv(tConverter, &pcBufFrom, &sLenFrom, &pcBufTo, &sLenTo) == (size_t) -1) {
@@ -713,7 +713,7 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
       }
       // Else a non-recoverable error occurred.
       iRetVal = 0;
-      goto close_free_and_exit;
+      goto free_close_and_exit;
     }
     else
       // Everything was OK.
@@ -722,10 +722,11 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
 
   csSet(pcsToStr, acBufTo);
 
-close_free_and_exit:
-  iconv_close(tConverter);
+free_close_and_exit:
   free(acBufFrom);
   free(acBufTo);
+close_and_exit:
+  iconv_close(tConverter);
 
   return iRetVal;
 }
