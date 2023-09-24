@@ -547,3 +547,4 @@ void initTimeFunctions(void) {
   // For timezone var in datetime2ticks().
   tzset();
 }
+
