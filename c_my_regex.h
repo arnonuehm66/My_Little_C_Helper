@@ -41,7 +41,6 @@
 //* includes
 
 // Add '-lpcre2-8' to the CMAKE_EXE_LINKER_FLAGS!
-#include "c_dynamic_arrays.h"
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
