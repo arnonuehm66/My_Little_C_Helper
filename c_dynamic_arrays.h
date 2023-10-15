@@ -13,7 +13,7 @@
  ** 22.02.2018  JE    Added daXFree() functions.
  ** 07.03.2019  JE    Now structs are all named.
  ** 18.04.2019  JE    Added dabXXX() functions for byte handling.
- ** 23.04.2019  JE    Changed xCount and xCapacity vars form int to size_t.
+ ** 23.04.2019  JE    Changed xCount and xCapacity vars from int to size_t.
  ** 23.04.2019  JE    Changed xData vars to appropriate names.
  ** 27.03.2020  JE    Added dasXXX() functions for size_t handling.
  *******************************************************************************/
