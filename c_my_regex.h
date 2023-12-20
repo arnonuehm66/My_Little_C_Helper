@@ -2,7 +2,7 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.10.2
+ ** Version: v0.11.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -27,6 +27,8 @@
  ** 12.02.2023  JE    Now rxInitMatcher() throws a wrong option error.
  ** 12.02.2023  JE    Now rxMatch() sets pos = 0 if finished without error.
  ** 19.02.2023  JE    Added convienience macros for ovector start and end.
+ ** 20.12.2023  JE    Now in 'rxMatch()' and 'rxInitMatcher()' 'pcsErr' and
+ **                   'piErr' can be NULL.
  *******************************************************************************/
 
 
@@ -142,7 +144,7 @@ int rxInitMatcher(t_rx_matcher* prxMatcher, const char* pcRegex, const char* pcF
       prxMatcher->ui32Opts |= PCRE2_DOTALL;
       continue;
     }
-    csSetf(pcsErr, "Unkown option '%c'", csFlags.cStr[i]);
+    if(pcsErr != NULL) csSetf(pcsErr, "Unkown option '%c'", csFlags.cStr[i]);
     iErr = RX_ERROR;
     goto free_and_exit;
   }
@@ -202,7 +204,7 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
     sStrLength = sSearchLenMax;
 
   // Init error value to none.
-  *piErr = RX_NO_ERROR;
+  if (piErr != NULL) *piErr = RX_NO_ERROR;
 
   //****************************************************************************
   //* The actual matching function block.
@@ -232,21 +234,21 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
   //****************************************************************************
 
   if (iMatchCount == PCRE2_ERROR_NOMATCH) {   // Just no match, no error!
-    csSet(pcsErr, "No match");
-    *piErr = RX_NO_MATCH;
+    if (pcsErr != NULL) csSet(pcsErr, "No match");
+    if (piErr  != NULL) *piErr = RX_NO_MATCH;
     iRv    = RX_RV_END;
     prxMatcher->sPos = 0;
     goto free_and_exit;
   }
   if (iMatchCount < 0) {                      // Matching failed.
-    csSetf(pcsErr, "Matching error %d", iMatchCount);
-    *piErr = RX_ERROR;
+    if (pcsErr != NULL) csSetf(pcsErr, "Matching error %d", iMatchCount);
+    if (piErr  != NULL) *piErr = RX_ERROR;
     iRv    = RX_RV_END;
     goto free_and_exit;
   }
   if (iMatchCount == 0) {                     // Creating output vector failed.
-    csSet(pcsErr, "'ovector' was not big enough for all captured substrings");
-    *piErr = RX_NO_VECTOR;
+    if (pcsErr != NULL) csSet(pcsErr, "'ovector' was not big enough for all captured substrings");
+    if (piErr  != NULL) *piErr = RX_NO_VECTOR;
     iRv    = RX_RV_END;
     goto free_and_exit;
   }
@@ -280,16 +282,16 @@ int rxMatch(t_rx_matcher* prxMatcher, size_t sStartPos, const char* pcSearchStr,
 
   // If the match was an empty string, hop along one pos.
   if (psOvector[O_END(0)] == psOvector[O_START(0)]) {
-    csSet(pcsErr, "Empty string");
-    *piErr = RX_NO_ERROR;
+    if (pcsErr != NULL) csSet(pcsErr, "Empty string");
+    if (piErr  != NULL) *piErr = RX_NO_ERROR;
     iRv    = RX_RV_CONT;
     ++prxMatcher->sPos;
     goto free_and_exit;
   }
 
   if (psOvector[0] >= sStrLength) {
-    csSet(pcsErr, "End of subject");
-    *piErr = RX_NO_ERROR;
+    if (pcsErr != NULL) csSet(pcsErr, "End of subject");
+    if (piErr  != NULL) *piErr = RX_NO_ERROR;
     iRv    = RX_RV_END;
     prxMatcher->sPos = 0;
     goto free_and_exit;
