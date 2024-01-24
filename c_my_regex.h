@@ -2,7 +2,7 @@
  ** Name: c_my_regex.h
  ** Purpose:  Provides an easy interface for pcre.h.
  ** Author: (JE) Jens Elstner
- ** Version: v0.11.1
+ ** Version: v0.11.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -29,6 +29,7 @@
  ** 19.02.2023  JE    Added convienience macros for ovector start and end.
  ** 20.12.2023  JE    Now in 'rxMatch()' and 'rxInitMatcher()' 'pcsErr' and
  **                   'piErr' can be NULL.
+ ** 24.01.2024  JE    Added a 'HowTo use' comment.
  *******************************************************************************/
 
 
@@ -70,6 +71,53 @@
 #define O_START(var) (2 * var)      // Even index.
 #define O_END(var)   (2 * var + 1)  // Odd index.
 
+
+//******************************************************************************
+//* How To use:
+//*-------------
+//* Invokation:
+//*   t_rx_matcher rxMatcher = {0};
+//*   const char*  crxCoord  = "\\d+ (\\.\\d+)?";
+//*   cstr         csErr     = csNew("");
+//*   int          rv        = 0;
+//*
+//* Return value is an error code and csErr will contain the pcre error code
+//* with its corresponding error string.
+//*
+//*   rv = rxInitMatcher(&prxMatcher, crxCoord, "x", &csErr);
+//*   if (rv != RX_NO_ERROR) throwAnError();
+//*
+//* Use NULL if csErr is not needed to be checked.
+//*
+//*   rv = rxInitMatcher(&prxMatcher, crxCoord, "x", NULL);
+//*   ...
+//*
+//* Single use:
+//*   const char* cSearchStr = "8.321654, 50.213456, 9, 49";
+//*   int         iErr       = 0;
+//*   cstr        csErr      = csNew("");
+//*   char*       cMatch     = NULL;
+//*   size_t      tStart     = 0;
+//*   size_t      tEnd       = 0;
+//*
+//*   rxMatch(rxMatcher, 0, cSearchStr, RX_LEN_MAX, &iErr, &csErr);
+//*   // The whole matched string.
+//*   cMatch = rxMatcher.dacsMatch.pVal[0].cStr;
+//*   // Start offset of first submatch string.
+//*   tStart = rxMatcher.dasStart.pVal[1];
+//*   // End offset of second submatch string.
+//*   tEnd   = rxMatcher.dasEnd.pVal[2];
+//*
+//* Loop usage (without using iErr and csErr):
+//*   while (rxMatch(rxMatcher, RX_KEEP_POS, const char* pcSearchStr, RX_LEN_MAX, NULL, NULL)) {
+//*     cMatch = rxMatcher.dacsMatch.pVal[1].cStr;
+//*     ...
+//*   }
+//*
+//* Free used pcre and matcher memories before leaving:
+//*   rxFreeMatcher(rxMatcher);
+//*
+//******************************************************************************
 
 //******************************************************************************
 //* type definition
