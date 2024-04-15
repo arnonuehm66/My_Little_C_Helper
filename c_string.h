@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.21.6
+ ** Version: v0.21.7
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -81,6 +81,7 @@
  ** 23.07.2023  JE    Refactored csInStr() constants.
  ** 23.07.2023  JE    Now csInStrRev() start position is counted from left.
  ** 04.08.2023  JE    Now if sLenFrom == 0 csIconv() frees resources.
+ ** 15.04.2024  JE    Changed int i to long long i in cstr_len().
  *******************************************************************************/
 
 
@@ -266,7 +267,7 @@ static long long cstr_len_utf8_char(const char* pcString, long long* pLen) {
  * Name: cstr_len
  *******************************************************************************/
 static long long cstr_len(const char* pcString) {
-  int i = 0;
+  long long i = 0;
   while (pcString[i] != '\0')
     ++i;
   return i;
