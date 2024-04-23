@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.21.7
+ ** Version: v0.22.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -82,6 +82,7 @@
  ** 23.07.2023  JE    Now csInStrRev() start position is counted from left.
  ** 04.08.2023  JE    Now if sLenFrom == 0 csIconv() frees resources.
  ** 15.04.2024  JE    Changed int i to long long i in cstr_len().
+ ** 22.04.2024  JE    Added csAddChar() and csAddStr().
  *******************************************************************************/
 
 
@@ -162,6 +163,8 @@ void csFree(cstr* pcsString);
 void        csSet(cstr* pcsString, const char* pcString);
 void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
+void        csAddChar(cstr* pcsDest, const char cAdd);
+void        csAddStr(cstr* pcsDest, const char* pcAdd);
 long long   csInStr(long long llPosStart, const char* pcString, const char* pcFind);
 long long   csInStrRev(long long llPosStart, const char* pcString, const char* pcFind);
 void        csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long llLength);
@@ -424,6 +427,28 @@ void csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd) {
 
   csFree(&csOut);
   csFree(&csAdd);
+}
+
+/*******************************************************************************
+ * Name: csAddChar
+ * Purpose: Add one char to a cstr object.
+ *******************************************************************************/
+void csAddChar(cstr* pcsDest, const char cAdd) {
+  cstr_double_capacity_if_full(pcsDest, 1);
+
+  pcsDest->cStr[pcsDest->len]     = cAdd;
+  pcsDest->cStr[pcsDest->len + 1] = 0;
+
+  ++pcsDest->len;
+  ++pcsDest->size;
+}
+
+/*******************************************************************************
+ * Name: csAddStr
+ * Purpose: Add a char string to a cstr object.
+ *******************************************************************************/
+void csAddStr(cstr* pcsDest, const char* pcAdd) {
+  csCat(pcsDest, pcsDest->cStr, pcAdd);
 }
 
 /*******************************************************************************
