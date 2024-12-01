@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.22.1
+ ** Version: v0.22.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -83,6 +83,8 @@
  ** 04.08.2023  JE    Now if sLenFrom == 0 csIconv() frees resources.
  ** 15.04.2024  JE    Changed int i to long long i in cstr_len().
  ** 22.04.2024  JE    Added csAddChar() and csAddStr().
+ ** 29.11.2024  JE    Added temp var to 'csSplitPos()' and 'csSplit()'
+ **                   preventing overwriting source if it's same as target.
  *******************************************************************************/
 
 
@@ -549,14 +551,17 @@ void csMid(cstr* pcsDest, const char* pcSource, long long llOffset, long long ll
  * Purpose: Splits a cstr string at first occurence of 'pcSplitAt'.
  *******************************************************************************/
 long long csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const char* pcSplitAt) {
+  cstr      csTmp   = csNew(pcString);
   long long llPos   = csInStr(0, pcString, pcSplitAt);
   long long llWidth = cstr_len(pcSplitAt);
 
   // Split, if found.
   if (llPos != CS_INSTR_NOT_FOUND) {
-    csMid(pcsLeft,  pcString,               0,       llPos);
-    csMid(pcsRight, pcString, llPos + llWidth, CS_MID_REST);
+    csMid(pcsLeft,  csTmp.cStr,               0,       llPos);
+    csMid(pcsRight, csTmp.cStr, llPos + llWidth, CS_MID_REST);
   }
+
+  csFree(&csTmp);
 
   // Return, where the split occured.
   return llPos;
@@ -567,13 +572,17 @@ long long csSplit(cstr* pcsLeft, cstr* pcsRight, const char* pcString, const cha
  * Purpose: Splits a cstr string at given offset and given width.
  *******************************************************************************/
 int csSplitPos(long long llPos, cstr* pcsLeft, cstr* pcsRight, const char* pcString, long long llWidth) {
+  cstr      csTmp       = csNew(pcString);
   long long llStringLen = cstr_len(pcString);
 
   if (llPos >= 0 && llPos <= llStringLen && llWidth >= 0 && llWidth <= llStringLen) {
-    csMid(pcsLeft,  pcString,               0,       llPos);
-    csMid(pcsRight, pcString, llPos + llWidth, CS_MID_REST);
+    csMid(pcsLeft,  csTmp.cStr,               0,       llPos);
+    csMid(pcsRight, csTmp.cStr, llPos + llWidth, CS_MID_REST);
     return 1;
   }
+
+  csFree(&csTmp);
+
   return 0;
 }
 
