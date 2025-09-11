@@ -58,6 +58,7 @@
  ** 19.04.2021  JE    Now use dynamic-array-macros.
  ** 30.11.2021  JE    Added csFree() in main() for all global cstr vars.
  ** 30.11.2021  JE    Added freeEntry().
+ ** 11.09.2025  JE    Now use csEq() family of functions.
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -298,31 +299,31 @@ void getOptions(int argc, char* argv[]) {
   while (iArg < argc) {
 next_argument:
     shift(&csArgv, &iArg, argc, argv);
-    if(strcmp(csArgv.cStr, "") == 0)
+    if (csEq(csArgv, ""))
       continue;
 
     // Long options:
     if (csArgv.cStr[0] == '-' && csArgv.cStr[1] == '-') {
-      if (!strcmp(csArgv.cStr, "--help")) {
+      if (csEq(csArgv, "--help")) {
         usage(ERR_NOERR, "");
       }
-      if (!strcmp(csArgv.cStr, "--version")) {
+      if (csEq(csArgv, "--version")) {
         version();
       }
-      if (!strcmp(csArgv.cStr, "--test")) {
+      if (csEq(csArgv, "--test")) {
         g_tOpts.iTestMode = 1;
         continue;
       }
-      if (!strcmp(csArgv.cStr, "--off")) {
+      if (csEq(csArgv, "--off")) {
         g_tOpts.iPrtOff = 1;
         continue;
       }
-      if (!strcmp(csArgv.cStr, "--rx")) {
+      if (csEq(csArgv, "--rx")) {
         if (! getArgStr(&g_tOpts.csRx, &iArg, argc, argv, ARG_CLI, NULL))
           dispatchError(ERR_ARGS, "rx is missing");
         continue;
       }
-      if (!strcmp(csArgv.cStr, "--rxF")) {
+      if (csEq(csArgv, "--rxF")) {
         if (! getArgStr(&g_tOpts.csRxF, &iArg, argc, argv, ARG_CLI, NULL))
           dispatchError(ERR_ARGS, "rxF is missing");
         continue;
@@ -394,7 +395,7 @@ next_argument:
     iPos = csInStr(0, csArgv.cStr, "=");
     if (iPos > 0) {
       csSplit(&csOpt, &csRv, csArgv.cStr, "=");
-      if (!strcmp(csOpt.cStr, "ox")) {
+      if (csEq(csOpt, "ox")) {
         if (! getArgHexLong((ll*) &g_tOpts.iOptX, NULL, 0, NULL, ARG_VAL, csRv.cStr))
           dispatchError(ERR_ARGS, "No valid ox or missing");
         continue;
