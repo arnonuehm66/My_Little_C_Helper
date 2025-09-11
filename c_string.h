@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.22.2
+ ** Version: v0.23.4
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -85,6 +85,10 @@
  ** 22.04.2024  JE    Added csAddChar() and csAddStr().
  ** 29.11.2024  JE    Added temp var to 'csSplitPos()' and 'csSplit()'
  **                   preventing overwriting source if it's same as target.
+ ** 28.07.2025  JE    Added 'csEq()' and 'csNe()' for easy string comparison.
+ ** 22.08.2025  JE    Now 'csEq()' and 'csNe()' use no more cstr pointer.
+ ** 22.08.2025  JE    Added 'cEq()' and 'cNe()' for convenience.
+ ** 08.09.2025  JE    Switched if-else logic in 'csIconv()'.
  *******************************************************************************/
 
 
@@ -162,6 +166,10 @@ void csClear(cstr* pcsString);
 void csFree(cstr* pcsString);
 
 // String manipulation functions.
+int         cEq(const char* pcString1, const char* pcString2);
+int         cNe(const char* pcString1, const char* pcString2);
+int         csEq(cstr csString, const char* pcString);
+int         csNe(cstr csString, const char* pcString);
 void        csSet(cstr* pcsString, const char* pcString);
 void        csSetf(cstr* pcsString, const char* pcFormat, ...);
 void        csCat(cstr* pcsDest, const char* pcSource, const char* pcAdd);
@@ -372,6 +380,38 @@ void csFree(cstr* pcsString) {
 
 //******************************************************************************
 //* String manipulation functions.
+
+/*******************************************************************************
+ * Name: cEq
+ * Purpose: Returns true if string comparison is equal.
+ *******************************************************************************/
+int cEq(const char* pcString1, const char* pcString2) {
+  return strcmp(pcString1, pcString2) == 0;
+}
+
+/*******************************************************************************
+ * Name: cEq
+ * Purpose: Returns true if string comparison is equal.
+ *******************************************************************************/
+int cNe(const char* pcString1, const char* pcString2) {
+  return strcmp(pcString1, pcString2) != 0;
+}
+
+/*******************************************************************************
+ * Name: csEq
+ * Purpose: Returns true if string comparison is equal.
+ *******************************************************************************/
+int csEq(cstr csString, const char* pcString) {
+  return strcmp(csString.cStr, pcString) == 0;
+}
+
+/*******************************************************************************
+ * Name: csNe
+ * Purpose: Returns true if string comparison is not equal.
+ *******************************************************************************/
+int csNe(cstr csString, const char* pcString) {
+  return strcmp(csString.cStr, pcString) != 0;
+}
 
 /*******************************************************************************
  * Name: csSet
@@ -738,21 +778,20 @@ int csIconv(cstr* pcsFromStr, cstr* pcsToStr, const char* pcFrom, const char* pc
       goto free_close_and_exit;
     }
 
-    if (iconv(tConverter, &pcBufFrom, &sLenFrom, &pcBufTo, &sLenTo) == (size_t) -1) {
-      // If out-buffer was too small try a bigger one and reset lengths.
-      if (errno == E2BIG) {
-        ++iFactor;
-        sLenFrom = pcsFromStr->size;
-        sLenTo   = pcsFromStr->size * iFactor;
-        continue;
-      }
-      // Else a non-recoverable error occurred.
+    // Everything worked fine. ;o)
+    if (iconv(tConverter, &pcBufFrom, &sLenFrom, &pcBufTo, &sLenTo) != (size_t) -1)
+      break;
+
+    // If a non-recoverable error occurred return from function.
+    if (errno != E2BIG) {
       iRetVal = 0;
       goto free_close_and_exit;
     }
-    else
-      // Everything was OK.
-      break;
+
+    // Else make out-buffer bigger and try again.
+    ++iFactor;
+    sLenFrom = pcsFromStr->size;
+    sLenTo   = pcsFromStr->size * iFactor;
   }
 
   csSet(pcsToStr, acBufTo);
@@ -768,7 +807,7 @@ close_and_exit:
 
 /*******************************************************************************
  * Name:  csIsUtf8
- * Purpose: Checks if string is ASCII or UTF-8.
+ * Purpose: Checks if string is pure ASCII or contains UTF-8 characters.
  *******************************************************************************/
 int csIsUtf8(const char* pcString) {
   long long len     = 0;

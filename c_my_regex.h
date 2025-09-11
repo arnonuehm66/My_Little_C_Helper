@@ -97,25 +97,25 @@
 //*   int         iErr       = 0;
 //*   cstr        csErr      = csNew("");
 //*   char*       cMatch     = NULL;
-//*   size_t      tStart     = 0;
-//*   size_t      tEnd       = 0;
+//*   size_t      sStart     = 0;
+//*   size_t      sEnd       = 0;
 //*
-//*   rxMatch(rxMatcher, 0, cSearchStr, RX_LEN_MAX, &iErr, &csErr);
+//*   rxMatch(&rxMatcher, 0, cSearchStr, RX_LEN_MAX, &iErr, &csErr);
 //*   // The whole matched string.
 //*   cMatch = rxMatcher.dacsMatch.pVal[0].cStr;
 //*   // Start offset of first submatch string.
-//*   tStart = rxMatcher.dasStart.pVal[1];
+//*   sStart = rxMatcher.dasStart.pVal[1];
 //*   // End offset of second submatch string.
-//*   tEnd   = rxMatcher.dasEnd.pVal[2];
+//*   sEnd   = rxMatcher.dasEnd.pVal[2];
 //*
 //* Loop usage (without using iErr and csErr):
-//*   while (rxMatch(rxMatcher, RX_KEEP_POS, const char* pcSearchStr, RX_LEN_MAX, NULL, NULL)) {
+//*   while (rxMatch(&rxMatcher, RX_KEEP_POS, const char* pcSearchStr, RX_LEN_MAX, NULL, NULL)) {
 //*     cMatch = rxMatcher.dacsMatch.pVal[1].cStr;
 //*     ...
 //*   }
 //*
 //* Free used pcre and matcher memories before leaving:
-//*   rxFreeMatcher(rxMatcher);
+//*   rxFreeMatcher(&rxMatcher);
 //*
 //******************************************************************************
 

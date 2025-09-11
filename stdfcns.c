@@ -563,7 +563,7 @@ time_t datetime2ticks(int fUseString, const char* pcTime,
   iYear  -= 1900;
   iMonth -= 1;
 
-  // Fille struct;
+  // Fill struct;
   sTime.tm_year = iYear;    // Year	- 1900.
   sTime.tm_mon  = iMonth;   // Month.   [0-11]
   sTime.tm_mday = iDay;     // Day.     [1-31]
