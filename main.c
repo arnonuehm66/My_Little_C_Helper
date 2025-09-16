@@ -59,6 +59,8 @@
  ** 30.11.2021  JE    Added csFree() in main() for all global cstr vars.
  ** 30.11.2021  JE    Added freeEntry().
  ** 11.09.2025  JE    Now use csEq() family of functions.
+ ** 16.09.2025  JE    Changed all occurrences of csCat(&str, str.cStr, "toadd") 
+ **                   to csAddStr(&str, "toadd").
  *******************************************************************************
  ** Skript tested with:
  ** TestDvice 123a.
@@ -83,7 +85,7 @@
 //******************************************************************************
 //* defines & macros
 
-#define ME_VERSION "0.0.53"
+#define ME_VERSION "0.0.54"
 cstr g_csMename;
 
 #define ERR_NOERR 0x00
@@ -182,7 +184,7 @@ void usage(int iErr, const char* pcMsg) {
 
   // Print at least one newline with message.
   if (csMsg.len != 0)
-    csCat(&csMsg, csMsg.cStr, "\n\n");
+    csAddStr(&csMsg, "\n\n");
 
   csSetf(&csMsg, "%s"
 //|************************ 80 chars width ****************************************|
