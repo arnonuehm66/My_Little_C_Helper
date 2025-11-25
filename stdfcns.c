@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.11.1
+ ** Version: v0.12.1
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -33,6 +33,7 @@
  ** 25.07.2022  JE    Added '#define arraySize(arr)' to get elements count.
  ** 23.07.2023  JE    Now uses c_string.h  v0.21.5
  ** 12.11.2024  JE    Added 'revInt64()', 'toInt64()' and 't_char2Int64'.
+ ** 24.11.2025  JE    Added exponent detection to 'isNumber()'.
  *******************************************************************************/
 
 
@@ -145,9 +146,12 @@ void shift(cstr* pcsRv, int* pI, int argc, char* argv[]) {
 /*******************************************************************************
  * Name:  isNumber
  * Purpose: Check if string is a int or float number.
+ *******************************************************************************
+ * ToDo: Add integer detection of number like "1.23e4".
  *******************************************************************************/
 int isNumber(cstr sString, int* piSign) {
   int iDecPt = 0;
+  int iExp   = 0;
 
   // Assume no sign.
   *piSign = 0;
@@ -157,7 +161,7 @@ int isNumber(cstr sString, int* piSign) {
   if (sString.cStr[0] == '+') *piSign =  1;
 
   // Continuation depends wether sign was found.
-  // Check for digits and decimal point.
+  // Check for digits, decimal point and exponent.
   for (int i = (*piSign != 0) ? 1 : 0; i < sString.len; ++i) {
     if (sString.cStr[i] == '.') {
       // Only one decimal point allowed!
@@ -165,6 +169,15 @@ int isNumber(cstr sString, int* piSign) {
         return NUM_NONE;
       else {
         iDecPt = 1;
+        continue;
+      }
+    }
+    if (sString.cStr[i] == 'e' || sString.cStr[i] == 'E') {
+      // Only one exponent allowed!
+      if (iExp)
+        return NUM_NONE;
+      else {
+        iExp = 1;
         continue;
       }
     }

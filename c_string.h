@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.23.4
+ ** Version: v0.24.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -89,6 +89,8 @@
  ** 22.08.2025  JE    Now 'csEq()' and 'csNe()' use no more cstr pointer.
  ** 22.08.2025  JE    Added 'cEq()' and 'cNe()' for convenience.
  ** 08.09.2025  JE    Switched if-else logic in 'csIconv()'.
+ ** 24.11.2025  JE    Added exponent handling in 'cstrtoll()'.
+ ** 25.11.2025  JE    Now 'cstr2ll()' and 'csHex2ll()' just use 'strtold()'.
  *******************************************************************************/
 
 
@@ -391,7 +393,7 @@ int cEq(const char* pcString1, const char* pcString2) {
 
 /*******************************************************************************
  * Name: cEq
- * Purpose: Returns true if string comparison is equal.
+ * Purpose: Returns true if string comparison is not equal.
  *******************************************************************************/
 int cNe(const char* pcString1, const char* pcString2) {
   return strcmp(pcString1, pcString2) != 0;
@@ -886,11 +888,10 @@ cstr ll2cstr(long long llValue) {
 
 /*******************************************************************************
  * Name:  cstr2ll
- * Purpose: Converts cstr to long long.
+ * Purpose: Converts cstr to long long. Be aware of exponents (e.g. 1e9).
  *******************************************************************************/
 long long cstr2ll(cstr csValue) {
-  char* pcEnd;
-  return strtoll(csValue.cStr, &pcEnd, 10);
+  return (long long) strtold(csValue.cStr, NULL);
 }
 
 /*******************************************************************************
@@ -934,21 +935,7 @@ cstr ll2csHex(long long llValue) {
  * Purpose: Converts hex cstr to long long.
  *******************************************************************************/
 long long csHex2ll(cstr csValue) {
-  cstr      csPre = csNew("");
-  cstr      csHex = csNew(csValue.cStr);
-  long long llVal = 0;
-
-  // Delete possible '0x' prior conversion.
-  csMid(&csPre, csHex.cStr, 0, 2);
-  if (!strcmp(csPre.cStr, "0x"))
-    csMid(&csHex, csHex.cStr, 2, CS_MID_REST);
-
-  llVal = strtoll(csHex.cStr, NULL, 16);
-
-  csFree(&csPre);
-  csFree(&csHex);
-
-  return llVal;
+  return (long long) strtold(csValue.cStr, NULL);
 }
 
 
