@@ -2,7 +2,7 @@
  ** Name: stdfcns.c
  ** Purpose:  Keeps standard functions in one place for better maintenance.
  ** Author: (JE) Jens Elstner
- ** Version: v0.12.1
+ ** Version: v0.13.3
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -34,6 +34,11 @@
  ** 23.07.2023  JE    Now uses c_string.h  v0.21.5
  ** 12.11.2024  JE    Added 'revInt64()', 'toInt64()' and 't_char2Int64'.
  ** 24.11.2025  JE    Added exponent detection to 'isNumber()'.
+ ** 02.07.2026  JE    Added 'read2Array()', 'revBytes()', 'printHexBytes()',
+ **                   'readBytesNext()', 'readBytesAt()' and 'writeBytesAt()'.
+ ** 02.07.2026  JE    Removed 'revInt32()' and 'revInt64()'.
+ ** 02.07.2026  JE    Refactored ticks2datetime().
+ ** 15.07.2026  JE    Fixed bug in 'readBytesAt()' and 'writeBytesAt()'.
  *******************************************************************************/
 
 
@@ -381,6 +386,31 @@ size_t getFileSize(FILE* hFile) {
 }
 
 /*******************************************************************************
+ * Name:  readBytesAt
+ * Purpose: Reads sLen bytes from a file at given offset. Returns bytes read.
+ *******************************************************************************/
+size_t readBytesAt(void* pData, long lOff, size_t sLen, FILE* hFile) {
+  if (fseek(hFile, lOff, SEEK_SET)) return 0;
+  return fread(pData, 1, sLen, hFile);
+}
+
+/*******************************************************************************
+ * Name:  writeBytesAt
+ *******************************************************************************/
+size_t writeBytesAt(void* pData, long lOff, size_t sLen, FILE* hFile) {
+  if (fseek(hFile, lOff, SEEK_SET)) return 0;
+  return fwrite(pData, 1, sLen, hFile);
+}
+
+/*******************************************************************************
+ * Name:  readBytesNext
+ * Purpose: Reads len bytes from a file. Returns bytes read.
+ *******************************************************************************/
+size_t readBytesNext(void* pData, size_t len, FILE* hFile) {
+  return fread(pData, 1, len, hFile);
+}
+
+/*******************************************************************************
  * Name:  readBytes
  * Purpose: Reads bytes from a file. 1 element = OK, 0 elements = EOF.
  *******************************************************************************/
@@ -391,12 +421,40 @@ int readBytes(void* pvBytes, size_t sLength, FILE* hFile) {
 }
 
 /*******************************************************************************
+ * Name:  read2Array
+ * Purpose: Copy sLen bytes from one array to another.
+ *******************************************************************************/
+void read2Array(uint8_t* pArray, uint8_t* uiData, size_t sOff, size_t sLen) {
+  for (size_t i = 0; i < sLen; ++i) pArray[i] = uiData[sOff + i];
+}
+
+/*******************************************************************************
+ * Name:  revBytes
+ * Purpose: Reverse sLen bytes in an array.
+ *******************************************************************************/
+void revBytes(uint8_t* pBytes, size_t sLen) {
+  uint8_t* b = (uint8_t*) malloc(sLen);
+    for (size_t i = 0; i < sLen; ++i) b[i] = pBytes[i];
+    for (size_t i = 0; i < sLen; ++i) pBytes[i] = b[sLen - 1 - i];
+  free(b);
+}
+
+/*******************************************************************************
  * Name:  printBytes
  * Purpose: Prints bytes to stdout.
  *******************************************************************************/
 void printBytes(uchar* pucBytes, size_t sLength) {
   for (size_t i = 0; i < sLength; ++i)
     printf("%c", pucBytes[i]);
+}
+
+/*******************************************************************************
+ * Name:  printHexBytes
+ * Purpose: Prints spaced bytes in hex format to stdout.
+ *******************************************************************************/
+void printHexBytes(uint8_t* pBytes, size_t sLen) {
+  for (size_t i = 0; i < sLen; ++i)
+    printf("%02x ", pBytes[i]);
 }
 
 /*******************************************************************************
@@ -427,22 +485,6 @@ int toInt64(char* pc8Bytes, int iCount) {
 }
 
 /*******************************************************************************
- * Name:  revInt64
- * Purpose: Revers byte order of a 64 bit integer.
- *******************************************************************************/
-uint64_t revInt64(uint64_t ui64Int) {
-  t_char2Int64 tc2iInt    = {0};
-  t_char2Int64 tc2iRevInt = {0};
-
-  // Invert bytes.
-  tc2iInt.uint64 = ui64Int;
-  for (int i = 0; i < 8; ++i) {
-    tc2iRevInt.ac8Bytes[i] = tc2iInt.ac8Bytes[7 - i];
-  }
-  return tc2iRevInt.uint64;
-}
-
-/*******************************************************************************
  * Name:  toInt
  * Purpose: Converts up to 4 bytes to integer.
  *******************************************************************************/
@@ -456,22 +498,6 @@ int toInt(char* pc4Bytes, int iCount) {
 #   endif
   }
   return tInt.uint32;
-}
-
-/*******************************************************************************
- * Name:  revInt32
- * Purpose: Revers byte order of a 32 bit integer.
- *******************************************************************************/
-uint32_t revInt32(uint32_t ui32Int) {
-  t_char2Int tc2iInt    = {0};
-  t_char2Int tc2iRevInt = {0};
-
-  // Invert bytes.
-  tc2iInt.uint32 = ui32Int;
-  for (int i = 0; i < 4; ++i) {
-    tc2iRevInt.ac4Bytes[i] = tc2iInt.ac4Bytes[3 - i];
-  }
-  return tc2iRevInt.uint32;
 }
 
 /*******************************************************************************
@@ -530,13 +556,13 @@ int checkDateTime(cstr* pcsDt) {
  * Name:  ticks2datetime
  * Purpose: Converts integer to "2017/11/03, 11:14:23" + txt string.
  *******************************************************************************/
-void ticks2datetime(cstr* pcsTxt, const char* pacTxt, time_t tTicks) {
+void ticks2datetime(cstr* pcsDateTime, const char* pacPostfix, time_t tTicks) {
   char       acTime[30] = {0};
   struct tm* psTime     = gmtime(&tTicks);
 
   // Returns "2017/11/03, 11:14:23" => 21 Bytes including '\0' Byte.
   strftime(acTime, sizeof(acTime), "%Y/%m/%d, %H:%M:%S", psTime);
-  csSetf(pcsTxt, "%s%s", acTime, pacTxt);
+  csSetf(pcsDateTime, "%s%s", acTime, pacPostfix);
 }
 
 /*******************************************************************************
