@@ -2,13 +2,14 @@
  ** Name: c_dynamic_arrays_macros.h
  ** Purpose:  Provides dynamic arrays as macros.
  ** Author: (JE) Jens Elstner
- ** Version: v0.1.3
+ ** Version: v0.1.4
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
  ** 11.04.2021  JE    Created lib.
  ** 19.04.2021  JE    Renamed 'ptArray' to 'tArray'.
  ** 17.07.2023  JE    Deleted if (ptr != NULL) in front of each free(ptr).
+ ** 13.09.2026  JE    Changed int i to size_t i in for loop.
  *******************************************************************************/
 
 
@@ -155,7 +156,7 @@
  * Purpose: Free memory of dynamic array.
  *******************************************************************************/
 #define daFreeEx(tArray, pointer) { \
-  for (int i = 0; i < tArray.sCount; ++i) free(tArray.pVal[i].pointer); \
+  for (size_t i = 0; i < tArray.sCount; ++i) free(tArray.pVal[i].pointer); \
   free(tArray.pVal); \
 }
 
