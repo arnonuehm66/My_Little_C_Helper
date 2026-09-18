@@ -2,7 +2,7 @@
  ** Name: c_string.h
  ** Purpose:  Provides a self contained kind of string.
  ** Author: (JE) Jens Elstner
- ** Version: v0.24.2
+ ** Version: v0.25.2
  *******************************************************************************
  ** Date        User  Log
  **-----------------------------------------------------------------------------
@@ -91,6 +91,8 @@
  ** 08.09.2025  JE    Switched if-else logic in 'csIconv()'.
  ** 24.11.2025  JE    Added exponent handling in 'cstrtoll()'.
  ** 25.11.2025  JE    Now 'cstr2ll()' and 'csHex2ll()' just use 'strtold()'.
+ ** 18.09.2026  JE    Now 'csReadLine()' returns 2 at EOF.
+ ** 18.09.2026  JE    Added constants for 'csReadLine()'.
  *******************************************************************************/
 
 
@@ -126,6 +128,11 @@
 // csInStr(), csInStrRev()
 #define CS_INSTR_START      (0)
 #define CS_INSTR_NOT_FOUND (-1)
+
+// csReadLine()
+#define CS_RL_OK  (0)
+#define CS_RL_ERR (1)
+#define CS_RL_EOF (2)
 
 // csIvonv()
 #define CS_ICONV_NO_GUESS (0)
@@ -714,19 +721,19 @@ int csReadLine(cstr* pcsLine, FILE* hFile) {
 
     if (ferror(hFile)) {
       clearerr(hFile);
-      return 0;
+      return CS_RL_OK;
     }
     if (iChar == '\n')
-      return 1;
+      return CS_RL_ERR;
     if (iChar ==  EOF)
-      return 1;
+      return CS_RL_EOF;
 
     // Create a minute string of one char.
     acChar[0] = (char) iChar;
     csCat(pcsLine, pcsLine->cStr, acChar);
   }
 
-  return 0;
+  return CS_RL_OK;
 }
 
 //*******************************************************************************
