@@ -9,6 +9,8 @@ Put everything in a directory and compile it with
 
 <b>Caveat:</b> If you use libraries with `-l` add them all at the end of the `gcc` command line to prevent unnecessary errors!
 
+If you want to use `c_my_hash_table.h` you have to use the math library. Compile with `gcc ... -lm`.
+
 If you want to use `c_my_regex.h` you have to install `libpcre2` on your system.
 
 Without 'c_my_regex.h'
