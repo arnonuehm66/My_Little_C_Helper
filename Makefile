@@ -3,7 +3,7 @@ NAME = skeleton_main_c
 
 CC = gcc
 CFLAGS = -Wall -Ofast -DNDEBUG
-LIBS = -lpcre2-8 -lcrypto
+LIBS = -m -lpcre2-8 -lcrypto
 DBCFLAGS = -Wall -O0 -g -DDEBUG
 
 STRIP = strip
